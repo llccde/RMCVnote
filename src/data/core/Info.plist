@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeIconFile</key>
+            <string>vnote.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>VNote Document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.plain-text</string>
+                <string>net.daringfireball.markdown</string>
+            </array>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+        </dict>
+    </array>
+    <key>CFBundleName</key>
+    <string>VNote</string>
+    <key>CFBundleExecutable</key>
+    <string>VNote</string>
+    <key>CFBundleShortVersionString</key>
+    <string>3.20</string>
+    <key>CFBundleVersion</key>
+    <string>3.20.1</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Distributed under LGPL-3.0 license. Copyright (c) 2025 app.vnote.fun</string>
+    <key>CFBundleIconFile</key>
+    <string>vnote.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>fun.vnote.vnote</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+    <key>NOTE</key>
+    <string>A pleasant note-taking platform</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+    <key>NSRequiresAquaSystemAppearance</key>
+    <true/>
+</dict>
+</plist>
