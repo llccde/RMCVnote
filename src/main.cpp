@@ -16,6 +16,7 @@
 #include "application.h"
 #include "commandlineoptions.h"
 #include "fakeaccessible.h"
+#include "utils/qmlAdapter.h"
 #include <core/configmgr.h>
 #include <core/coreconfig.h>
 #include <core/exception.h>
@@ -35,6 +36,9 @@ void loadTranslators(QApplication &p_app);
 void showMessageOnCommandLineIfAvailable(const QString &p_msg);
 
 int main(int argc, char *argv[]) {
+   qmlRegisterType<QmlAdapter>("VNoteX", 1, 0, "CloudSyncAdapter");
+
+
   QTextCodec *codec = QTextCodec::codecForName("UTF8");
   if (codec) {
     QTextCodec::setCodecForLocale(codec);
@@ -94,6 +98,8 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion(ConfigMgr::getApplicationVersion());
   }
 
+
+  
   CommandLineOptions cmdOptions;
   switch (cmdOptions.parse(app.arguments())) {
   case CommandLineOptions::Ok:

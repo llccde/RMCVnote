@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "CloudFileManagerPanel.h"
+#include "cloudsyncpanel_llbb.h"
 #include "framelessmainwindow/framelessmainwindowimpl.h"
 
 #include <QBitArray>
@@ -27,9 +29,10 @@ class SearchPanel;
 class SnippetPanel;
 class HistoryPanel;
 class WindowsPanel;
+class CloudSyncPanel;
 class ExportDialog;
 class ConsoleViewer;
-
+class CloudFileManagerPanel;
 enum { RESTART_EXIT_CODE = 1000 };
 
 class MainWindow : public FramelessMainWindowImpl {
@@ -122,6 +125,8 @@ private:
 
   void setupWindowsPanel();
 
+  void setupCloudSyncPanel();
+  
   void setupNotebookExplorer();
 
   void setupTagExplorer();
@@ -179,6 +184,10 @@ private:
   LocationList *m_locationList = nullptr;
 
   SearchPanel *m_searchPanel = nullptr;
+
+  CloudSyncPanel *m_cloudSyncPanel = nullptr;
+
+  CloudFileManagerPanel *m_cloudFileManagerPanel = nullptr;
 
   SnippetPanel *m_snippetPanel = nullptr;
 

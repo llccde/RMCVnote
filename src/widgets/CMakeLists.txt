@@ -123,6 +123,7 @@ target_sources(vnote PRIVATE
     titletoolbar.cpp titletoolbar.h
     toolbarhelper.cpp toolbarhelper.h
     toolbox.cpp toolbox.h
+    cloudsyncpanel_llbb.cpp cloudsyncpanel_llbb.h
     treeview.cpp treeview.h
     treewidget.cpp treewidget.h
     treewidgetitem.cpp treewidgetitem.h
@@ -138,4 +139,5 @@ target_sources(vnote PRIVATE
     windowspanel.cpp windowspanel.h
     windowsprovider.cpp windowsprovider.h
     wordcountpopup.cpp wordcountpopup.h
+    CloudFileManagerPanel.h CloudFileManagerPanel.cpp
 )

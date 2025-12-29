@@ -81,6 +81,8 @@ target_sources(vnote PRIVATE
     vnotex.cpp vnotex.h
     webresource.h
     widgetconfig.cpp widgetconfig.h
+    CloudSyncHelper.cpp CloudSyncHelper.h
+    CloudSyncFileMapping.cpp CloudSyncFileMapping.h
 )
 
 target_include_directories(vnote PRIVATE

@@ -8,6 +8,11 @@ set(QT_DEFAULT_MAJOR_VERSION 6 CACHE STRING "Qt version to use (5 or 6), default
 find_package(Qt${QT_DEFAULT_MAJOR_VERSION} REQUIRED COMPONENTS Core Gui Network PrintSupport Sql Svg Widgets WebChannel WebEngineWidgets LinguistTools)
 find_package(Qt${QT_DEFAULT_MAJOR_VERSION} OPTIONAL_COMPONENTS Core5Compat)
 
+find_package(Qt6 REQUIRED COMPONENTS QuickWidgets)
+
+
+
+
 if ((QT_DEFAULT_MAJOR_VERSION GREATER 5))
     qt_standard_project_setup()
 else()
@@ -27,7 +32,7 @@ set(MACOSX_BUNDLE_ICON_FILE vnote.icns)
 set(VX_APP_ICON_MACOS data/core/icons/vnote.icns)
 set_source_files_properties(${VX_APP_ICON_MACOS} PROPERTIES
     MACOSX_PACKAGE_LOCATION "Resources")
-
+set(QT_QML_GENERATE_QMLLS_INI ON)
 # Translations
 set(VX_TS_FILES data/core/translations/vnote_zh_CN.ts
     data/core/translations/vnote_ja.ts)
@@ -51,13 +56,13 @@ list(APPEND VX_QM_FILES
 set(VX_RESOURCE_FILES data/core/core.qrc)
 set(VX_EXTRA_RESOURCE_FILES_RCC ${CMAKE_CURRENT_BINARY_DIR}/vnote_extra.rcc)
 qt_add_binary_resources(VX_EXTRA_RESOURCE data/extra/extra.qrc DESTINATION ${VX_EXTRA_RESOURCE_FILES_RCC} OPTIONS -compress 9)
-
+set(QML_RESOURCE data/qml/qml.qrc)
 add_executable(vnote WIN32 MACOSX_BUNDLE
     application.cpp application.h
     commandlineoptions.cpp commandlineoptions.h
     fakeaccessible.cpp fakeaccessible.h
     main.cpp
-    ${VX_APP_ICON_RC_WIN} ${VX_APP_ICON_MACOS} ${VX_RESOURCE_FILES}
+    ${VX_APP_ICON_RC_WIN} ${VX_APP_ICON_MACOS} ${VX_RESOURCE_FILES} ${QML_RESOURCE}
 )
 
 # Translations
@@ -76,6 +81,8 @@ set(VX_LIBS_FOLDER ../libs)
 target_include_directories(vnote PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+target_link_libraries(vnote PRIVATE Qt6::QuickWidgets)
 
 find_program(GOLD_LINKER "ld.gold")
 if (NOT ${GOLD_LINKER} STREQUAL GOLD_LINKER-NOTFOUND)

@@ -13,8 +13,9 @@
 #include <versioncontroller/dummyversioncontrollerfactory.h>
 #include <versioncontroller/iversioncontroller.h>
 
+#include "notebook/notebookparameters.h"
+#include "CloudSyncHelper.h"
 using namespace vnotex;
-
 NotebookMgr::NotebookMgr(QObject *p_parent)
     : QObject(p_parent), m_currentNotebookId(Notebook::InvalidId) {}
 
@@ -31,9 +32,13 @@ void NotebookMgr::init() {
   initBackendServer();
 
   initNotebookServer();
+
+  m_cloudSyncHelper.reset(new CloudSyncHelper());
 }
 
 void NotebookMgr::initVersionControllerServer() {
+  
+  
   m_versionControllerServer.reset(new NameBasedServer<IVersionControllerFactory>);
 
   // Dummy Version Controller.
@@ -114,6 +119,11 @@ NotebookMgr::createVersionController(const QString &p_controllerName) const {
   }
 
   return nullptr;
+}
+
+QSharedPointer<CloudSyncHelper> NotebookMgr::creatCloudSyncHelper() const
+{
+    return  m_cloudSyncHelper;
 }
 
 QSharedPointer<INotebookConfigMgr>

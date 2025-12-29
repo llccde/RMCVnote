@@ -4,8 +4,11 @@
 #include "global.h"
 #include "historyi.h"
 #include "notebook.h"
+#include <cstddef>
+#include <qobject.h>
 
 namespace vnotex {
+class CloudSyncFileMapping;
 class BundleNotebookConfigMgr;
 class NotebookConfig;
 class NotebookDatabaseAccess;
@@ -83,6 +86,10 @@ private:
 
   // Managed by QObject.
   NotebookTagMgr *m_tagMgr = nullptr;
+
+  CloudSyncFileMapping *m_fileMapping = nullptr;
+
+  
 };
 } // namespace vnotex
 

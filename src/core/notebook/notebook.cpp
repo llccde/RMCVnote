@@ -29,7 +29,7 @@ Notebook::Notebook(const NotebookParameters &p_paras, QObject *p_parent)
       m_icon(p_paras.m_icon), m_imageFolder(p_paras.m_imageFolder),
       m_attachmentFolder(p_paras.m_attachmentFolder), m_createdTimeUtc(p_paras.m_createdTimeUtc),
       m_backend(p_paras.m_notebookBackend), m_versionController(p_paras.m_versionController),
-      m_configMgr(p_paras.m_notebookConfigMgr) {
+      m_configMgr(p_paras.m_notebookConfigMgr),m_cloudSyncHelper(p_paras.m_cloudSyncHelper) {
   if (m_imageFolder.isEmpty()) {
     m_imageFolder = c_defaultImageFolder;
   }

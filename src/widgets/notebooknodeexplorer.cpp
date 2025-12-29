@@ -31,6 +31,8 @@
 #include <notebook/nodeparameters.h>
 #include <notebook/notebook.h>
 #include <notebookconfigmgr/inotebookconfigmgr.h>
+#include <qaction.h>
+#include <qfileinfo.h>
 #include <utils/clipboardutils.h>
 #include <utils/docsutils.h>
 #include <utils/iconutils.h>
@@ -46,6 +48,17 @@
 #include <core/historymgr.h>
 #include <core/sessionconfig.h>
 #include <core/widgetconfig.h>
+
+//@llbb
+#include <QDesktopServices>
+#include <QUrl>
+#include <QFileInfo>
+#include <QDir>
+#include <QMessageBox>
+#include <QProcess>
+//!--llbb
+
+
 
 using namespace vnotex;
 
@@ -2457,7 +2470,9 @@ void NotebookNodeExplorer::addOpenWithMenu(QMenu *p_menu, bool p_master) {
   subMenu->addSeparator();
 
   {
-    auto defaultAct = subMenu->addAction(tr("System Default Program"));
+    auto defaultAct = 
+    subMenu->addAction(tr("System Default Program"));
+
     connect(defaultAct, &QAction::triggered, this,
             [this, p_master]() { openSelectedNodesWithProgram(QString(), p_master); });
     const auto &coreConfig = ConfigMgr::getInst().getCoreConfig();
@@ -2465,6 +2480,25 @@ void NotebookNodeExplorer::addOpenWithMenu(QMenu *p_menu, bool p_master) {
                                        coreConfig.getShortcut(CoreConfig::OpenWithDefaultProgram));
   }
 
+  {
+    auto openInExplorerAct = subMenu->addAction(tr("在文件资源管理器中打开"));
+    connect(openInExplorerAct, &QAction::triggered, [this,p_master]() {
+      // 获取选中的文件路径列表
+      const auto files = getSelectedNodesPath(p_master); // QList<QString>
+    
+      // 如果没有任何选中项，直接返回
+      if (files.isEmpty()) {
+          QMessageBox::information(this, tr("提示"), tr("没有选中任何文件"));
+          return;
+      }
+      QFileInfo firstFileInfo(files.first());
+      QString dirPath = firstFileInfo.path();
+      QUrl url = QUrl::fromLocalFile(dirPath);
+      // 打开文件资源管理器
+      QDesktopServices::openUrl(url);
+    });
+  }
+  
   subMenu->addAction(tr("Add External Program"), this, []() {
     const auto file = DocsUtils::getDocFile(QStringLiteral("external_programs.md"));
     if (!file.isEmpty()) {

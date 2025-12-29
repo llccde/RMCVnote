@@ -16,4 +16,8 @@ target_sources(vnote PRIVATE
     vxurlutils.cpp vxurlutils.h
     webutils.cpp webutils.h
     widgetutils.cpp widgetutils.h
+    qmlAdapter.cpp qmlAdapter.h
+    CloudFileManagerAdapter.h CloudFileManagerAdapter.cpp
+    
+
 )

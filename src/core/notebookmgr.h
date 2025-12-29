@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QScopedPointer>
 #include <QVector>
+#include <qobject.h>
 
 #include "global.h"
 #include "namebasedserver.h"
@@ -22,7 +23,7 @@ class INotebookBackendFactory;
 class INotebookFactory;
 class NotebookParameters;
 class Node;
-
+class CloudSyncHelper;
 class NotebookMgr : public QObject, private Noncopyable {
   Q_OBJECT
 public:
@@ -31,6 +32,10 @@ public:
   void init();
 
   void close();
+
+  QSharedPointer<CloudSyncHelper> m_cloudSyncHelper = nullptr;
+  
+
 
   QSharedPointer<INotebookFactory> getBundleNotebookFactory() const;
 
@@ -46,7 +51,7 @@ public:
                                                          const QString &p_rootFolderPath) const;
 
   QSharedPointer<IVersionController> createVersionController(const QString &p_controllerName) const;
-
+  QSharedPointer<CloudSyncHelper> creatCloudSyncHelper() const;  
   QSharedPointer<INotebookConfigMgr>
   createNotebookConfigMgr(const QString &p_mgrName,
                           const QSharedPointer<INotebookBackend> &p_backend) const;

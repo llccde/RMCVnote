@@ -12,7 +12,7 @@
 
 #include "notebookdatabaseaccess.h"
 #include "notebooktagmgr.h"
-
+#include "CloudSyncFileMapping.h"
 using namespace vnotex;
 
 BundleNotebook::BundleNotebook(const NotebookParameters &p_paras,
@@ -24,7 +24,10 @@ BundleNotebook::BundleNotebook(const NotebookParameters &p_paras,
   setupDatabase();
 }
 
-BundleNotebook::~BundleNotebook() { m_dbAccess->close(); }
+BundleNotebook::~BundleNotebook() { 
+  m_dbAccess->close();
+  m_fileMapping->close();
+}
 
 BundleNotebookConfigMgr *BundleNotebook::getBundleNotebookConfigMgr() const {
   return static_cast<BundleNotebookConfigMgr *>(getConfigMgr().data());
@@ -33,6 +36,7 @@ BundleNotebookConfigMgr *BundleNotebook::getBundleNotebookConfigMgr() const {
 void BundleNotebook::setupDatabase() {
   auto dbPath = getBackend()->getFullPath(BundleNotebookConfigMgr::getDatabasePath());
   m_dbAccess = new NotebookDatabaseAccess(this, dbPath, this);
+  m_fileMapping = new CloudSyncFileMapping(dbPath,this);
 }
 
 void BundleNotebook::initializeInternal() {
@@ -45,7 +49,7 @@ void BundleNotebook::initializeInternal() {
 
 void BundleNotebook::initDatabase() {
   m_dbAccess->initialize(m_configVersion);
-
+  m_fileMapping->initialize();
   if (m_dbAccess->isFresh()) {
     // For previous version notebook without DB, just ignore the node Id from config.
     int cnt = 0;

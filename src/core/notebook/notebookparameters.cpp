@@ -34,5 +34,6 @@ QSharedPointer<NotebookParameters> NotebookParameters::createNotebookParameters(
   paras->m_notebookBackend = p_backend;
   paras->m_versionController = p_mgr.createVersionController(p_versionController);
   paras->m_notebookConfigMgr = p_mgr.createNotebookConfigMgr(p_configMgr, paras->m_notebookBackend);
+  paras->m_cloudSyncHelper = p_mgr.creatCloudSyncHelper();
   return paras;
 }

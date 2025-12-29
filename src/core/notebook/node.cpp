@@ -155,6 +155,7 @@ void Node::insertChild(int p_idx, const QSharedPointer<Node> &p_node) {
 void Node::removeChild(const QSharedPointer<Node> &p_child) {
   if (m_children.removeOne(p_child)) {
     p_child->setParent(nullptr);
+    emit m_notebook->nodeUpdated(this);
   }
 }
 

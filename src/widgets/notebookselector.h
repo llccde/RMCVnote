@@ -27,6 +27,8 @@ public:
 signals:
   void newNotebookRequested();
 
+  
+
   // NavigationMode.
 protected:
   QVector<void *> getVisibleNavigationItems() Q_DECL_OVERRIDE;

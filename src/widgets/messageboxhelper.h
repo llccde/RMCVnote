@@ -40,6 +40,7 @@ public:
                                        const QString &p_detailedText = QString(),
                                        QWidget *p_parent = nullptr);
 
+                                       
 private:
   // Use default title.
   static int showMessageBox(MessageBoxHelper::Type p_type, const QString &p_text,

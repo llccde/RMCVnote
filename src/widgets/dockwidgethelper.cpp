@@ -74,8 +74,12 @@ QString DockWidgetHelper::iconFileName(DockIndex p_dockIndex) {
     return "location_list_dock.svg";
   case DockIndex::ConsoleDock:
     return "console_dock.svg";
+  case DockIndex::CloudSyncDock:
+    return "cloud_sync.svg";
+  case DockIndex::CloudFileManagerDock:
+    return "cloud.svg";
   default:
-    return QString();
+    return "missing.svg";
   }
 }
 
@@ -113,6 +117,8 @@ void DockWidgetHelper::setupDocks() {
   setupConsoleDock();
 
   setupLocationListDock();
+
+  setupCloudSyncDock();
 
   setupShortcuts();
 
@@ -218,6 +224,27 @@ void DockWidgetHelper::setupLocationListDock() {
   m_mainWindow->addDockWidget(Qt::BottomDockWidgetArea, dock);
   dock->hide();
 }
+
+//@llbb
+void DockWidgetHelper::setupCloudSyncDock()
+{
+  auto dock = createDockWidget(DockIndex::CloudSyncDock, tr("Cloud Sync"), m_mainWindow);
+
+  dock->setObjectName(QStringLiteral("CloudSyncDock.vnotex"));
+  dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+  addWidgetToDock(dock, m_mainWindow->m_cloudSyncPanel);
+  m_mainWindow->addDockWidget(Qt::BottomDockWidgetArea, dock);
+
+
+
+  auto dock2 = createDockWidget(DockIndex::CloudFileManagerDock, tr("Cloud Files"),m_mainWindow);
+  dock2->setObjectName(QStringLiteral("CloudFileManagerDock.vnotex"));
+  dock2->setAllowedAreas(Qt::AllDockWidgetAreas);
+  addWidgetToDock(dock2, m_mainWindow->m_cloudFileManagerPanel);
+  m_mainWindow->addDockWidget(Qt::BottomDockWidgetArea, dock2);
+
+}
+//!--llbb
 
 QDockWidget *DockWidgetHelper::createDockWidget(DockIndex p_dockIndex, const QString &p_title,
                                                 QWidget *p_parent) {

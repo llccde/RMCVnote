@@ -5,9 +5,11 @@
 #include <QObject>
 #include <QSharedPointer>
 
+#include "CloudSyncHelper.h"
 #include "node.h"
 #include "notebookparameters.h"
 #include <core/global.h>
+#include <qobject.h>
 
 namespace vnotex {
 class INotebookBackend;
@@ -17,7 +19,7 @@ class NodeParameters;
 class File;
 class HistoryI;
 class TagI;
-
+class CloudSyncHelper;
 // Base class of notebook.
 class Notebook : public QObject {
   Q_OBJECT
@@ -200,7 +202,7 @@ private:
 
   // Version controller.
   QSharedPointer<IVersionController> m_versionController;
-
+  QSharedPointer<CloudSyncHelper> m_cloudSyncHelper;
   // Config manager to read/wirte config files.
   QSharedPointer<INotebookConfigMgr> m_configMgr;
 

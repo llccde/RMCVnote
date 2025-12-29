@@ -5,6 +5,7 @@
 #include <QPair>
 #include <QSet>
 #include <QVector>
+#include <qstyle.h>
 
 #include "navigationmode.h"
 
@@ -29,8 +30,11 @@ public:
     WindowsDock,
     ConsoleDock,
     LocationListDock,
+    CloudSyncDock,
+    CloudFileManagerDock,
     MaxDock
   };
+
   Q_ENUM(DockIndex)
 
   explicit DockWidgetHelper(MainWindow *p_mainWindow);
@@ -106,6 +110,8 @@ private:
   void setupTagDock();
 
   void setupLocationListDock();
+
+  void setupCloudSyncDock();
 
   QDockWidget *createDockWidget(DockIndex p_dockIndex, const QString &p_title, QWidget *p_parent);
 

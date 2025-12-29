@@ -20,8 +20,10 @@
 #include <QVariant>
 #include <QWebEngineView>
 #include <QWindowStateChangeEvent>
-
+#include <CloudSyncFileMapping.h>
+#include "CloudFileManagerPanel.h"
 #include "buffermgr.h"
+#include "cloudsyncpanel_llbb.h"
 #include "consoleviewer.h"
 #include "dialogs/updater.h"
 #include "historypanel.h"
@@ -54,6 +56,7 @@
 #include <core/thememgr.h>
 #include <core/widgetconfig.h>
 #include <notebook/notebook.h>
+#include <qdebug.h>
 #include <utils/docsutils.h>
 #include <utils/iconutils.h>
 #include <utils/widgetutils.h>
@@ -247,6 +250,10 @@ void MainWindow::setupDocks() {
 
   setupSearchPanel();
 
+  //@llbb
+  setupCloudSyncPanel();
+  //!--llbb
+
   setupSnippetPanel();
 
   setupLocationList();
@@ -286,7 +293,16 @@ void MainWindow::setupWindowsPanel() {
   m_windowsPanel = new WindowsPanel(QSharedPointer<WindowsProvider>::create(m_viewArea), this);
   m_windowsPanel->setObjectName("WindowsPanel.vnotex");
 }
+//@llbb
+void MainWindow::setupCloudSyncPanel()
+{
+  m_cloudSyncPanel = new CloudSyncPanel( this);
+  m_cloudSyncPanel->setObjectName("CloudSyncPanel.vnotex");
 
+  m_cloudFileManagerPanel = new CloudFileManagerPanel(this);
+  m_cloudFileManagerPanel->setObjectName("CloudFileManagerPanel.vnotex");
+}
+//!--llbb
 void MainWindow::setupLocationList() {
   m_locationList = new LocationList(this);
   m_locationList->setObjectName("LocationList.vnotex");
@@ -326,6 +342,11 @@ void MainWindow::setupNotebookExplorer() {
           &NotebookExplorer::setCurrentNotebook);
   connect(m_notebookExplorer, &NotebookExplorer::notebookActivated, &notebookMgr,
           &NotebookMgr::setCurrentNotebook);
+
+  connect(&notebookMgr, &NotebookMgr::currentNotebookChanged, this,
+          [](){
+            qDebug("current book changed");
+          });
 }
 
 void MainWindow::closeEvent(QCloseEvent *p_event) {

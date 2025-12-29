@@ -42,7 +42,7 @@ void FileTypeHelper::setupBuiltInTypes() {
       type.m_suffixes = *suffixes;
     } else {
       type.m_suffixes << QStringLiteral("md") << QStringLiteral("mkd") << QStringLiteral("rmd")
-                      << QStringLiteral("markdown");
+                      << QStringLiteral("markdown"); 
     }
 
     m_fileTypes.push_back(type);
