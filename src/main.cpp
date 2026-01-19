@@ -28,7 +28,7 @@
 #include <utils/widgetutils.h>
 #include <widgets/mainwindow.h>
 #include <widgets/messageboxhelper.h>
-
+#include "QQuickStyle"
 using namespace vnotex;
 
 void loadTranslators(QApplication &p_app);
@@ -36,6 +36,7 @@ void loadTranslators(QApplication &p_app);
 void showMessageOnCommandLineIfAvailable(const QString &p_msg);
 
 int main(int argc, char *argv[]) {
+  QQuickStyle::setStyle("Fusion");
    qmlRegisterType<QmlAdapter>("VNoteX", 1, 0, "CloudSyncAdapter");
 
 

@@ -1,6 +1,7 @@
 #ifndef QMLADAPTER_H
 #define QMLADAPTER_H
 
+#include "core/global.h"
 #include "notebookmgr.h"
 #include "vnotex.h"
 #include <QObject>
@@ -10,7 +11,7 @@
 namespace vnotex {
 
 struct NoteVersionInfo {
-    int version;
+    vnotex::ID version;
     QString time;
     QString user;
     QString hash;
@@ -19,10 +20,10 @@ struct NoteVersionInfo {
     QString changeType;
     QString changeDescription;
     bool autoSave;
-    
+
     inline QVariantMap toVariantMap() const {
         return {
-            {"version", version},
+            {"version", static_cast<qulonglong>(version)},
             {"time", time},
             {"user", user},
             {"hash", hash},
@@ -36,7 +37,7 @@ struct NoteVersionInfo {
 };
 
 struct NoteDetailsInfo {
-    int id;
+    vnotex::ID id;
     QString name;
     QString cloudId;
     QString filePath;
@@ -46,8 +47,8 @@ struct NoteDetailsInfo {
     int syncStatus;
     QString lastSyncTime;
     QString syncError;
-    int currentVersion;
-    int cloudVersion;
+    vnotex::ID currentVersion;
+    vnotex::ID cloudVersion;
     bool hasConflict;
     QStringList tags;
     QStringList categories;
@@ -57,10 +58,10 @@ struct NoteDetailsInfo {
     int wordCount;
     int readCount;
     int editCount;
-    
+
     QVariantMap toVariantMap() const {
         QVariantMap map;
-        map["id"] = id;
+        map["id"] = static_cast<qulonglong>(id);
         map["name"] = name;
         map["cloudId"] = cloudId;
         map["filePath"] = filePath;
@@ -70,8 +71,8 @@ struct NoteDetailsInfo {
         map["syncStatus"] = syncStatus;
         map["lastSyncTime"] = lastSyncTime;
         map["syncError"] = syncError;
-        map["currentVersion"] = currentVersion;
-        map["cloudVersion"] = cloudVersion;
+        map["currentVersion"] = static_cast<qulonglong>(currentVersion);
+        map["cloudVersion"] = static_cast<qulonglong>(cloudVersion);
         map["hasConflict"] = hasConflict;
         map["tags"] = tags;
         map["categories"] = categories;
@@ -98,37 +99,39 @@ public:
     // 供QML调用的方法
     Q_INVOKABLE void refreshNotebooks();
     Q_INVOKABLE QVariantList getNotebooks() const;
-    Q_INVOKABLE QVariantList getNotes(int notebookId) const;
+    Q_INVOKABLE QVariantList getNotes(vnotex::ID notebookId) const;
     Q_INVOKABLE void addNotebook();
-    
+
     // 在编辑器中打开给定笔记的给定版本
-    Q_INVOKABLE void viewNoteVersion(int noteId, int notebookId, int version);
+    Q_INVOKABLE void viewNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
     // 将其下载到本地,但是不打开
-    Q_INVOKABLE void restoreNoteVersion(int noteId, int notebookId, int version);
+    Q_INVOKABLE void restoreNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
     // 获取详细信息
-    Q_INVOKABLE QVariantMap getNoteDetails(int noteId, int notebookId);
-    
-    Q_INVOKABLE QVariantList getCloudNotes(int notebookId);
-    Q_INVOKABLE QVariantList compareWithCloud(int notebookId);
+    Q_INVOKABLE QVariantMap getNoteDetails(vnotex::ID noteId, vnotex::ID notebookId);
+
+    Q_INVOKABLE QVariantList getCloudNotes(vnotex::ID notebookId);
+    Q_INVOKABLE QVariantList compareWithCloud(vnotex::ID notebookId);
 
 
     Q_INVOKABLE void syncAllNotebooks();
-    Q_INVOKABLE void syncNotebook(int notebookId);
-    Q_INVOKABLE void syncNote(int noteId, int notebookId);
-    Q_INVOKABLE void openNote(int noteId, int notebookId);
+    Q_INVOKABLE void syncNotebook(vnotex::ID notebookId);
+    Q_INVOKABLE void syncNote(vnotex::ID noteId, vnotex::ID notebookId);
+    Q_INVOKABLE void openNote(vnotex::ID noteId, vnotex::ID notebookId);
     Q_INVOKABLE void setSyncInterval(int minutes);
     Q_INVOKABLE int getSyncInterval() const;
     Q_INVOKABLE void setAutoSync(bool enabled);
     Q_INVOKABLE bool getAutoSync() const;
-    
+
 signals:
     void syncStatusChanged(const QString &status);
     void notebookListChanged(const QVariantList &notebooks);
-    void noteListChanged(int notebookId, const QVariantList &notes);
-    void noteDetailsChanged(int noteId, int notebookId);
-    void syncProgressChanged(int notebookId, int progress);
+    void noteListChanged(vnotex::ID notebookId, const QVariantList &notes);
+    void noteDetailsChanged(vnotex::ID changedNoteId, vnotex::ID changedNotebookId);
+    void syncProgressChanged(vnotex::ID notebookId, int progress);
     void syncErrorOccurred(const QString &error);
     void cloudConnectionChanged(bool connected);
+    void noteChanged(vnotex::ID notebookId,vnotex::ID noteID);
+
     
 private:
     void setupConnections();

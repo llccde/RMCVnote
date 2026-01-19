@@ -108,7 +108,7 @@ Rectangle {
                         case "syncing": return "同步中..."
                         case "success": return "同步成功"
                         case "error": return "同步失败"
-                        default: return "未知"
+                        default: return syncStatus
                         }
                     }
                     color: "#666"

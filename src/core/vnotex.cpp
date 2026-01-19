@@ -12,11 +12,17 @@
 
 #include "fileopenparameters.h"
 #include "quickaccesshelper.h"
-
+#include "utils/LocalDBMap.h"
 #include <task/taskmgr.h>
 #include <utils/docsutils.h>
 
 using namespace vnotex;
+
+  VNoteX::~VNoteX()
+  {
+    
+  }
+
 
 VNoteX::VNoteX(QObject *p_parent) : QObject(p_parent) {
   m_instanceId = QRandomGenerator::global()->generate64();

@@ -5,20 +5,25 @@
     <file>NotebookItem.qml</file>
     <file>NoteItem.qml</file>
     <file>ExpandStateManager.qml</file>
+    <file>old.qml</file>
     <file>CloudFileManager/CloudFileManagerPage.qml</file>
     <file>CloudFileManager/main.qml</file>
     <file>CloudFileManager/components/AccountPanel.qml</file>
     <file>CloudFileManager/components/CollapseButton.qml</file>
     <file>CloudFileManager/components/DownloadButton.qml</file>
+    <file>CloudFileManager/components/FileBasicInfo.qml</file>
     <file>CloudFileManager/components/FileDetailPanel.qml</file>
+    <file>CloudFileManager/components/FileHistoryPanel.qml</file>
     <file>CloudFileManager/components/FileItem.qml</file>
     <file>CloudFileManager/components/FileListPanel.qml</file>
     <file>CloudFileManager/components/HeaderToolbar.qml</file>
+    <file>CloudFileManager/components/LastSyncInfo.qml</file>
     <file>CloudFileManager/components/NetworkStatusIndicator.qml</file>
-    <file>CloudFileManager/components/SortToolbar.qml</file>
     <file>CloudFileManager/components/PullRecordItem.qml</file>
+    <file>CloudFileManager/components/PullRecordList.qml</file>
+    <file>CloudFileManager/components/SortButton.qml</file>
+    <file>CloudFileManager/components/SortToolbar.qml</file>
     <file>CloudFileManager/components/UploadRecordItem.qml</file>
     <file>CloudFileManager/components/UploadRecordList.qml</file>
-    <file>CloudFileManager/components/PullRecordList.qml</file>
   </qresource>
 </RCC>

@@ -6,23 +6,42 @@ Button {
     id: root
     property var fileData
     property var adapter
+    property string localPath: ""
+    
     text: "下载"
+    flat: true
+    
+    background: Rectangle {
+        implicitWidth: 80
+        implicitHeight: 36
+        radius: 6
+        color: root.down ? "#E0E0E0" : root.hovered ? "#F5F5F5" : "white"
+        border.color: "#E0E0E0"
+        border.width: 1
+    }
     
     onClicked: downloadDialog.open()
     
-    // 下载对话框
     Dialog {
+        parent: Overlay.overlay
+        anchors.centerIn: parent
         id: downloadDialog
-        property var fileData: root.fileData
-        property var adapter: root.adapter
-        
         modal: true
         title: "下载选项"
         standardButtons: Dialog.Ok | Dialog.Cancel
         
+        width: 400
+        
+        background: Rectangle {
+            radius: 8
+            color: "white"
+            border.color: "#E0E0E0"
+        }
+        
         ColumnLayout {
-            width: parent ? parent.width : 400
-            spacing: 10
+            id: lay
+            width: parent.width
+            spacing: 12
             
             RadioButton {
                 id: currentNotebookRadio
@@ -33,36 +52,113 @@ Button {
             RadioButton {
                 id: specificNotebookRadio
                 text: "到指定笔记本"
-                onCheckedChanged: if (checked && notebookCombo.model.length > 0) notebookCombo.popup.open()
+            }
+            
+            ComboBox {
+                id: notebookCombo
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40  // 设置推荐高度
+                model: ["笔记本A", "笔记本B", "笔记本C"]
+                enabled: specificNotebookRadio.checked
+                visible: specificNotebookRadio.checked
+                Layout.leftMargin: 20  // 缩进显示
+                Layout.rightMargin: 30  // 缩进显示
                 
-                ComboBox {
-                    id: notebookCombo
-                    model: ["笔记本A", "笔记本B", "笔记本C"]
-                    Layout.fillWidth: true
-                    enabled: specificNotebookRadio.checked
+                // 设置内容项样式
+                contentItem: Text {
+                    text: notebookCombo.displayText
+                    font: notebookCombo.font
+                    color: notebookCombo.enabled ? "black" : "gray"
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 10
+                    rightPadding: notebookCombo.indicator.width + 10
+                }
+                
+                // 设置下拉指示器
+                indicator: Rectangle {
+                    x: notebookCombo.width - width
+                    y: notebookCombo.topPadding + (notebookCombo.availableHeight - height) / 2
+                    width: 20
+                    height: 20
+                    color: "transparent"
+                    Text {
+                        text: "▼"
+                        font.pixelSize: 12
+                        color: notebookCombo.enabled ? "black" : "gray"
+                        anchors.centerIn: parent
+                    }
+                }
+                
+                background: Rectangle {
+                    radius: 4
+                    border.color: notebookCombo.enabled ? "#E0E0E0" : "#F0F0F0"
+                    border.width: 1
+                    color: notebookCombo.enabled ? "white" : "#F8F8F8"
+                }
+                
+                // 设置下拉框样式
+                popup: Popup {
+                    y: notebookCombo.height
+                    width: notebookCombo.width
+                    implicitHeight: contentItem.implicitHeight
+                    padding: 1
+                    
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: notebookCombo.popup.visible ? notebookCombo.delegateModel : null
+                        currentIndex: notebookCombo.highlightedIndex
+                        
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                    }
+                    
+                    background: Rectangle {
+                        radius: 4
+                        border.color: "#E0E0E0"
+                        color: "white"
+                    }
+                }
+                
+                // 设置下拉项样式
+                delegate: ItemDelegate {
+                    width: notebookCombo.width
+                    height: 40
+                    text: modelData
+                    highlighted: notebookCombo.highlightedIndex === index
+                    background: Rectangle {
+                        color: highlighted ? "#E0E0E0" : "transparent"
+                    }
                 }
             }
             
             RadioButton {
                 id: localComputerRadio
                 text: "到此电脑"
-                onCheckedChanged: {
-                    if (checked && adapter) {
-                        var path = adapter.explore("选择保存路径")
-                        if (path) {
-                            // 保存路径到某个变量，这里需要一个属性来存储
-                            localPath = path
+            }
+            
+            ColumnLayout {
+                Layout.leftMargin: 20  // 缩进显示
+                spacing: 5
+                visible: localComputerRadio.checked
+                
+                Button {
+                    text: "选择路径"
+                    Layout.fillWidth: true
+                    Layout.margins:30
+                    Layout.preferredHeight: 30
+                    onClicked: {
+                        if (adapter) {
+                            var path = adapter.explore("选择保存路径")
+                            if (path) localPath = path
                         }
                     }
                 }
                 
-                // 添加一个文本显示选择的路径
                 Label {
-                    id: pathLabel
                     text: localPath ? "路径: " + localPath : "未选择路径"
-                    visible: localComputerRadio.checked
                     Layout.fillWidth: true
                     elide: Text.ElideMiddle
+                    color: localPath ? "black" : "gray"
                 }
             }
             
@@ -79,22 +175,20 @@ Button {
                 var notebookName = ""
                 
                 if (currentNotebookRadio.checked) {
-                    // 下载到当前笔记本
-                    notebookName = "" // 空表示当前笔记本
+                    notebookName = ""
                 } else if (specificNotebookRadio.checked) {
-                    // 下载到指定笔记本
                     notebookName = notebookCombo.currentText
                 } else if (localComputerRadio.checked) {
-                    // 下载到此电脑
                     targetPath = localPath
                 }
                 
-                // 调用适配器的下载方法
                 adapter.downloadFile(fileData.cloudId, targetPath, notebookName, mappingCheckbox.checked)
             }
         }
+        
+        onRejected: {
+            // 重置选择
+            currentNotebookRadio.checked = true
+        }
     }
-    
-    // 存储本地路径的属性
-    property string localPath: ""
 }

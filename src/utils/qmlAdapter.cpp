@@ -1,10 +1,19 @@
 #include "qmladapter.h"
+#include "core/global.h"
 #include "notebook/notebook.h"
 #include "notebookmgr.h"
 #include "vnotex.h"
 #include <QTimer>
 #include <QDebug>
-
+#include <qlist.h>
+#include <qobject.h>
+#include <qtmetamacros.h>
+#include "LocalDataOfUser.h"
+#include "CloudFileNetWork.h"
+#include "qmessagebox.h"
+#include "file.h"
+#include "widgets/dialogs/CloudSyncDialog.h"
+#include "widgets/mainwindow.h"
 using namespace vnotex;
 
 QmlAdapter::QmlAdapter(QObject *parent)
@@ -20,21 +29,21 @@ void QmlAdapter::setupConnections()
     connect(&VNoteX::getInst().getNotebookMgr(), &NotebookMgr::notebooksUpdated, this, [this]() {
         for (auto i : VNoteX::getInst().getNotebookMgr().getNotebooks()) {
             connect(i.data(), &Notebook::nodeUpdated, [this](const Node *p) {
-                emit noteListChanged(p->getNotebook()->getId(), 
+                emit noteListChanged(p->getNotebook()->getId(),
                                     getNotes(p->getNotebook()->getId()));
             });
         }
         emit notebookListChanged(getNotebooks());
     });
-    
-    connect(&VNoteX::getInst().getNotebookMgr(), &NotebookMgr::notebookUpdated, 
+
+    connect(&VNoteX::getInst().getNotebookMgr(), &NotebookMgr::notebookUpdated,
             this, [this](const Notebook* book) {
                 connect(book, &Notebook::nodeUpdated,
                     [this](const Node *p) {
                         emit notebookListChanged(getNotebooks());
                     });
             });
-    
+
     // 初始发射笔记本列表
     emit notebookListChanged(getNotebooks());
 }
@@ -82,42 +91,43 @@ QVariantList QmlAdapter::getNotebooks() const {
 }
 
 // 获取指定笔记本的所有笔记
-QVariantList QmlAdapter::getNotes(int notebookId) const {
+QVariantList QmlAdapter::getNotes(vnotex::ID notebookId) const {
     QVariantList result;
-    
+
     auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
+
     if (!notebook) {
-        qWarning() << "Notebook not found:" << notebookId;
+        qWarning() << "Notebook not found:" << static_cast<qulonglong>(notebookId);
         return result;
     }
-    
+
     // 获取根节点
     auto rootNode = notebook->getRootNode();
     if (!rootNode) {
         qWarning() << "Root node not found";
         return result;
     }
-    
+
     // 递归获取所有有内容的节点
     std::function<void(const QSharedPointer<Node>&)> collectNotes;
     collectNotes = [&](const QSharedPointer<Node>& node) {
         if (node->hasContent()) {
             QVariantMap noteMap;
-            noteMap["id"] = node->getId();
+            noteMap["id"] = static_cast<qulonglong>(node->getId());
             noteMap["name"] = node->getName();
             noteMap["path"] = node->fetchPath();
             result.append(noteMap);
         }
-        
+
         // 递归处理子节点
         const auto &children = node->getChildrenRef();
         for (const auto &child : children) {
             collectNotes(child);
         }
     };
-    
+
     collectNotes(rootNode);
-    
+
     return result;
 }
 
@@ -136,10 +146,10 @@ void QmlAdapter::syncAllNotebooks() {
 }
 
 // 同步单个笔记本
-void QmlAdapter::syncNotebook(int notebookId) {
+void QmlAdapter::syncNotebook(vnotex::ID notebookId) {
     qDebug() << "Syncing notebook:" << notebookId;
     setSyncStatus("syncing");
-    
+
     QTimer::singleShot(1500, this, [this, notebookId]() {
         setSyncStatus("success");
         qDebug() << "Notebook" << notebookId << "synced successfully";
@@ -147,17 +157,72 @@ void QmlAdapter::syncNotebook(int notebookId) {
 }
 
 // 同步单个笔记
-void QmlAdapter::syncNote(int noteId, int notebookId) {
+void QmlAdapter::syncNote(vnotex::ID noteId, vnotex::ID notebookId) {
     qDebug() << "Syncing note:" << noteId << "from notebook:" << notebookId;
     setSyncStatus("syncing");
+
+    auto mapping = LocalDataOfUser::getUser()->getMapping();
+    auto backend = CloudFileNetWork::getInstance();
+
+    auto note = VNoteX::getInst().getNotebookMgr()
+        .findNotebookById(notebookId)->FindNoteById(noteId);
+
+    if(!note){
+        auto mb = QMessageBox();
+        mb.setText("note book not found");
+        mb.exec();
+    }
+    if(mapping->has({notebookId,noteId})){
+        auto cloudFileID = mapping->value({notebookId,noteId}); 
+        
+        auto b = backend->updateFileContent(
+            CloudFileNetWork::IDFromString(cloudFileID),
+            note->getContentFile()->read());
+        if(b.isFailure() && b.status == ErrorStatus::FileIDNotFound){
+            auto dialog = CloudSyncDialog(
+                VNoteX::getInst().getMainWindow()
+                ,[&](const CloudSyncDialog::SubmitConfig& config){
+                    emit noteDetailsChanged(noteId,notebookId);
+                    return "";
+                }
+            );
+            dialog.exec();
+        }
+        else {
+            setSyncStatus("success");
+        }
+    }else {
+        auto dialog = CloudSyncDialog(
+            VNoteX::getInst().getMainWindow()
+            ,[&](const CloudSyncDialog::SubmitConfig& config){
+                if(config.mode == CloudSyncDialog::OperationMode::SelectExisting){
+                    (*mapping)[{notebookId,noteId}] = config.selectedId;            
+                }else {
+                    NetResult<CloudFileNetWorkFileAndVersionID> res = backend->addFile(
+                        config.newFileName
+                        ,note->getContentFile()->read()
+                        ,config.getDescription());
+                    if(!res.isSuccess()){
+                        return res.errorToString();
+                    }
+                    (*mapping)[{notebookId,noteId}] = CloudFileNetWork::IDToString(res.getData());
+                    
+                }
+                emit noteDetailsChanged(noteId,notebookId);
+                return QString();
+            }
+        );
+        dialog.exec();
+        
+
+    }
     
-    QTimer::singleShot(1000, this, [this]() {
-        setSyncStatus("success");
-    });
+    
+
 }
 
 // 打开笔记
-void QmlAdapter::openNote(int noteId, int notebookId) {
+void QmlAdapter::openNote(vnotex::ID noteId, vnotex::ID notebookId) {
     qDebug() << "Opening note:" << noteId << "from notebook:" << notebookId;
 }
 
@@ -167,7 +232,7 @@ void QmlAdapter::addNotebook() {
 }
 
 // 查看笔记版本
-void QmlAdapter::viewNoteVersion(int noteId, int notebookId, int version) {
+void QmlAdapter::viewNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version) {
     Q_UNUSED(noteId)
     Q_UNUSED(notebookId)
     Q_UNUSED(version)
@@ -175,7 +240,7 @@ void QmlAdapter::viewNoteVersion(int noteId, int notebookId, int version) {
 }
 
 // 恢复笔记版本
-void QmlAdapter::restoreNoteVersion(int noteId, int notebookId, int version) {
+void QmlAdapter::restoreNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version) {
     Q_UNUSED(noteId)
     Q_UNUSED(notebookId)
     Q_UNUSED(version)
@@ -183,19 +248,25 @@ void QmlAdapter::restoreNoteVersion(int noteId, int notebookId, int version) {
 }
 
 // 获取笔记详细信息
-QVariantMap QmlAdapter::getNoteDetails(int noteId, int notebookId) {
+QVariantMap QmlAdapter::getNoteDetails(vnotex::ID noteId, vnotex::ID notebookId) {
     qDebug() << "Getting note details:" << noteId << "from notebook:" << notebookId;
 
     // 实际应该从数据层获取，这里返回模拟数据
     NoteDetailsInfo details;
     details.id = noteId;
-    details.name = QString("笔记 %1").arg(noteId);
-    details.cloudId = QString("CLOUD-%1-%2").arg(notebookId).arg(noteId);
-    details.filePath = QString("/notes/note_%1.md").arg(noteId);
+    details.name = QString("笔记 %1").arg(static_cast<qulonglong>(noteId));
+    details.cloudId = QString("CLOUD-%1-%2").arg(static_cast<qulonglong>(notebookId)).arg(static_cast<qulonglong>(noteId));
+    details.filePath = QString("/notes/note_%1.md").arg(static_cast<qulonglong>(noteId));
     details.size = 2048; // 2KB
     details.modifiedTime = "2023-10-15 14:30:22";
     details.createdTime = "2023-10-13 16:45:10";
-    details.syncStatus = 1; // 1:已同步
+    
+    auto a = LocalDataOfUser::getUser()->getMapping()->find({notebookId,noteId});
+    if(a==LocalDataOfUser::getUser()->getMapping()->end()){
+        details.syncStatus = 0;
+    }else {
+        details.syncStatus = 1;
+    };
     details.lastSyncTime = "2023-10-15 14:35:00";
     details.syncError = "";
     details.currentVersion = 3;
@@ -214,7 +285,7 @@ QVariantMap QmlAdapter::getNoteDetails(int noteId, int notebookId) {
 }
 
 // 获取云端笔记列表
-QVariantList QmlAdapter::getCloudNotes(int notebookId) {
+QVariantList QmlAdapter::getCloudNotes(vnotex::ID notebookId) {
     Q_UNUSED(notebookId)
     qDebug() << "Getting cloud notes for notebook:" << notebookId;
 
@@ -223,7 +294,7 @@ QVariantList QmlAdapter::getCloudNotes(int notebookId) {
 }
 
 // 与云端比较
-QVariantList QmlAdapter::compareWithCloud(int notebookId) {
+QVariantList QmlAdapter::compareWithCloud(vnotex::ID notebookId) {
     Q_UNUSED(notebookId)
     qDebug() << "Comparing with cloud for notebook:" << notebookId;
 

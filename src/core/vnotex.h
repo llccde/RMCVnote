@@ -3,12 +3,16 @@
 
 #include <QObject>
 #include <QScopedPointer>
+#include <qcontainerfwd.h>
+#include <string>
 
 #include "global.h"
 #include "noncopyable.h"
 #include "thememgr.h"
 
+
 namespace vnotex {
+class CloudLocalMapping;
 class MainWindow;
 class NotebookMgr;
 class BufferMgr;
@@ -26,7 +30,7 @@ public:
     static VNoteX inst;
     return inst;
   }
-
+  ~VNoteX();
   // MUST be called to load some heavy data.
   // It is good to call it after MainWindow is shown.
   void initLoad();
@@ -143,7 +147,8 @@ private:
 
   // QObject managed.
   BufferMgr *m_bufferMgr = nullptr;
-
+  
+  //
   // Used to identify app's instance.
   ID m_instanceId = 0;
 };

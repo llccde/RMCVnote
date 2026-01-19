@@ -10,6 +10,7 @@ find_package(Qt${QT_DEFAULT_MAJOR_VERSION} OPTIONAL_COMPONENTS Core5Compat)
 
 find_package(Qt6 REQUIRED COMPONENTS QuickWidgets)
 
+find_package(Qt6 REQUIRED COMPONENTS QuickControls2)
 
 
 
@@ -113,6 +114,7 @@ target_link_libraries(vnote PRIVATE
     Qt::WebChannel
     Qt::WebEngineWidgets
     Qt::Widgets
+    Qt::QuickControls2
     VTextEdit
     qhotkey
 )

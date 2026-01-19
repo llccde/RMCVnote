@@ -43,7 +43,7 @@ public:
   void setName(const QString &p_name);
   // Change the config and backend file as well.
   void updateName(const QString &p_name);
-
+  
   const QString &getDescription() const;
   void setDescription(const QString &p_description);
   void updateDescription(const QString &p_description);
@@ -76,6 +76,7 @@ public:
   const QSharedPointer<INotebookConfigMgr> &getConfigMgr() const;
 
   const QSharedPointer<Node> &getRootNode() const;
+  const QSharedPointer<Node> FindNoteById(ID id) const;
 
   QSharedPointer<Node> newNode(Node *p_parent, Node::Flags p_flags, const QString &p_name,
                                const QString &p_content = QString());

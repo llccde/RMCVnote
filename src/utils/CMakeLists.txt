@@ -18,6 +18,7 @@ target_sources(vnote PRIVATE
     widgetutils.cpp widgetutils.h
     qmlAdapter.cpp qmlAdapter.h
     CloudFileManagerAdapter.h CloudFileManagerAdapter.cpp
-    
-
+    CloudFileNetWork.cpp CloudFileNetWork.h
+    LocalDBMap.h
+    LocalDataOfUser.h
 )

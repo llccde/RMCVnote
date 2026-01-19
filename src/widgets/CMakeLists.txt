@@ -31,6 +31,7 @@ target_sources(vnote PRIVATE
     dialogs/renametagdialog.cpp dialogs/renametagdialog.h
     dialogs/scrolldialog.cpp dialogs/scrolldialog.h
     dialogs/selectdialog.cpp dialogs/selectdialog.h
+    dialogs/CloudSyncDialog.cpp dialogs/CloudSyncDialog.h
     dialogs/selectionitemwidget.cpp dialogs/selectionitemwidget.h
     dialogs/settings/appearancepage.cpp dialogs/settings/appearancepage.h
     dialogs/settings/editorpage.cpp dialogs/settings/editorpage.h

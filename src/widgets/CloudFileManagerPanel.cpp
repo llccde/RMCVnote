@@ -1,3 +1,4 @@
+// cloudfilemanagerpanel.cpp
 #include "cloudfilemanagerpanel.h"
 #include "utils/cloudfilemanageradapter.h"
 #include <QQmlContext>
@@ -6,7 +7,8 @@
 #include <QDebug>
 #include <QQuickView>
 #include <QWindow>
-
+#include <QQuickStyle>
+#include <QResizeEvent>
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
@@ -17,26 +19,24 @@ CloudFileManagerPanel::CloudFileManagerPanel(QWidget *p_parent)
     : QWidget(p_parent),
       m_quickView(nullptr),
       m_container(nullptr),
-      m_qmlSourcePath("qrc:/qml/cloudFileManager.qml")
+      m_qmlSourcePath("qrc:/qml/CloudFileManager/main.qml")
 {
-    
     setupUI();
 }
 
+
+
 void CloudFileManagerPanel::setupUI() {
     // 注册QmlAdapter类型到QML
-    // 由于是单例，我们使用qmlRegisterSingletonType
-    qmlRegisterSingletonType<CloudFileManagerAdapter>("VNoteX", 1, 0, "CloudFileManagerAdapter",
-        [](QQmlEngine* engine, QJSEngine* scriptEngine) -> QObject* {
-            return CloudFileManagerAdapter::getAdapter();
-        });
-    
+    qmlRegisterSingletonInstance<CloudFileManagerAdapter>(
+    "VNoteX", 1, 0, 
+    "CloudFileManagerAdapter", CloudFileManagerAdapter::getAdapter());
     // 创建 QQuickView
     m_quickView = new QQuickView();
     
     // 设置 QSurfaceFormat 以实现透明背景
     QSurfaceFormat format = m_quickView->format();
-    format.setAlphaBufferSize(8);  // 启用 alpha 通道
+    format.setAlphaBufferSize(8);
     m_quickView->setFormat(format);
     
     // 设置颜色为透明
@@ -67,6 +67,11 @@ void CloudFileManagerPanel::setupUI() {
         }
     });
     
+    // 连接销毁信号
+    connect(m_quickView, &QQuickView::destroyed, [this]() {
+        qDebug() << "QQuickView destroyed";
+    });
+    
 #ifdef Q_OS_WIN
     // Windows 特定修复
     if (m_container->windowHandle()) {
@@ -77,4 +82,11 @@ void CloudFileManagerPanel::setupUI() {
     // 确保透明背景有效
     setAttribute(Qt::WA_TranslucentBackground);
     m_container->setAttribute(Qt::WA_TranslucentBackground);
+}
+
+void CloudFileManagerPanel::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+    if (m_container && m_quickView) {
+        m_container->resize(event->size());
+    }
 }

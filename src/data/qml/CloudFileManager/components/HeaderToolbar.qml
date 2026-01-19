@@ -14,6 +14,7 @@ Rectangle {
         // 网络状况指示器
         NetworkStatusIndicator {
             status: adapter ? adapter.networkStatus : "未知"
+            Layout.leftMargin: 20
             Layout.alignment: Qt.AlignVCenter
         }
         

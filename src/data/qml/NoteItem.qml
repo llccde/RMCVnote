@@ -6,12 +6,13 @@ Rectangle {
     id: root
 
     // 属性定义
+    property var note_modelData:null
     property int noteId: 0
     property string noteName: ""
     property string notePath: ""
     property int notebookId: -1
     property var adapter: null
-    property int syncStatus: 0 // 0:不是最新(红), 1:是最新(绿), 2:未同步(灰), 3:后台自动同步(蓝)
+    property int syncStatus: noteDetails.syncStatus // 0:不是最新(红), 1:是最新(绿), 2:未同步(灰), 3:后台自动同步(蓝)
 
     property bool expanded: false
     property var noteDetails: ({})
@@ -20,14 +21,35 @@ Rectangle {
     signal syncClicked()
     signal viewVersionClicked(int version)
     signal restoreVersionClicked(int version)
-
+    function updateNoteDetails() {
+        if (adapter && noteId !== 0 && notebookId !== -1) {
+            var details = adapter.getNoteDetails(noteId, notebookId);
+            if (details) {
+                root.noteDetails = details;
+            }
+        }
+    }
     width: parent ? parent.width : 100
     height: expanded ? 200 : 30
     radius: 4
     color: mouseArea.containsMouse ? "#e8e8e8" : "#ffffff"
     border.color: mouseArea.containsPress ? "#3498db" : "transparent"
     border.width: 1
-
+    Behavior on color {
+        ColorAnimation { duration: 200 } // 200毫秒的过渡时间
+    }
+    Component.onCompleted: {
+        updateNoteDetails();
+    }
+    Connections {
+    target: adapter
+    enabled: adapter !== null
+    onNoteDetailsChanged: {
+        if (changedNoteId === root.noteId && changedNotebookId === root.notebookId) {
+            updateNoteDetails();
+        }
+    }
+}
     // 同步状态圆点
     Rectangle {
         id: statusDot
@@ -74,7 +96,31 @@ Rectangle {
             }
         }
     }
-
+// 鼠标交互区域
+    MouseArea {
+        id: mouseArea
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: {
+            root.expanded = !root.expanded;
+            
+            // 如果展开，则获取详细信息
+            if (root.expanded && adapter && noteId !== 0 && notebookId !== -1) {
+                var details = adapter.getNoteDetails(noteId, notebookId);
+                if (details) {
+                    root.noteDetails = details;
+                    
+                    // 模拟版本列表（实际应从adapter获取）
+                    root.versionList = [
+                        {"version": 3, "time": "2023-10-15 14:30", "size": "2.1KB"},
+                        {"version": 2, "time": "2023-10-14 09:15", "size": "2.0KB"},
+                        {"version": 1, "time": "2023-10-13 16:45", "size": "1.9KB"}
+                    ];
+                }
+            }
+        }
+    }
     Row {
         id: topRow
         width: parent.width - 20
@@ -108,7 +154,7 @@ Rectangle {
             id: syncBtn
             text: {
                 switch(root.syncStatus) {
-                case 0: return "立即同步";
+                case 0: return "立即同步!";
                 case 1: return "已同步";
                 case 2: return "同步到云端";
                 case 3: return "同步中...";
@@ -128,31 +174,7 @@ Rectangle {
         }
     }
 
-    // 鼠标交互区域
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: {
-            root.expanded = !root.expanded;
-            
-            // 如果展开，则获取详细信息
-            if (root.expanded && adapter && noteId !== 0 && notebookId !== -1) {
-                var details = adapter.getNoteDetails(noteId, notebookId);
-                if (details) {
-                    root.noteDetails = details;
-                    
-                    // 模拟版本列表（实际应从adapter获取）
-                    root.versionList = [
-                        {"version": 3, "time": "2023-10-15 14:30", "size": "2.1KB"},
-                        {"version": 2, "time": "2023-10-14 09:15", "size": "2.0KB"},
-                        {"version": 1, "time": "2023-10-13 16:45", "size": "1.9KB"}
-                    ];
-                }
-            }
-        }
-    }
+    
 
     // 展开后的详细信息区域
     Rectangle {
@@ -326,10 +348,12 @@ Rectangle {
         NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
     }
 
+
+
     // 子组件定义
     Component {
         id: syncToCloudBtn
-        
+
         Button {
             text: "同步到云端"
             flat: true

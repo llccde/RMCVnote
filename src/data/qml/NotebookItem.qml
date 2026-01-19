@@ -13,6 +13,12 @@ Rectangle {
     property var adapter: null  // 改为可选属性，避免绑定循环
     
     property bool expanded: false
+    /**
+    
+    id
+    name
+    path
+    */
     property var noteList: []
     property bool notesLoaded: false
     
@@ -130,6 +136,7 @@ Rectangle {
                 model: notebookItem.noteList
                 
                 delegate: NoteItem {
+                    note_modelData: modelData
                     noteId: modelData.id || 0
                     noteName: modelData.name || ""
                     notePath: modelData.path || ""

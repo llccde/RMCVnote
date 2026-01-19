@@ -1,6 +1,10 @@
 #include "cloudfilemanageradapter.h"
+#include "CloudFileNetWork.h"
+#include <qcollator.h>
 
 using namespace vnotex;
+
+
 
 CloudFileManagerAdapter* CloudFileManagerAdapter::getAdapter()
 {
@@ -12,7 +16,13 @@ CloudFileManagerAdapter* CloudFileManagerAdapter::getAdapter()
 CloudFileManagerAdapter::CloudFileManagerAdapter(QObject *parent)
     : QObject(parent)
 {
-    // 空实现，具体功能后续添加
+    // Initialize the database
+    CloudFileNetWork *network = CloudFileNetWork::getInstance();
+    NetResult<bool> initResult = network->initializeDatabase();
+    if (initResult.isFailure()) {
+        qWarning() << "Failed to initialize database:" << initResult.status;
+    }
+
 }
 
 void CloudFileManagerAdapter::login(const QString& username, const QString& password, bool remember)
@@ -28,18 +38,48 @@ void CloudFileManagerAdapter::logout()
     // 空实现，具体功能后续添加
 }
 
+
+
+
+
 QVariantList CloudFileManagerAdapter::getFileList(int sortBy)
 {
-    // 空实现，具体功能后续添加
-    Q_UNUSED(sortBy)
-    return QVariantList();
+    CloudFileNetWork *network = CloudFileNetWork::getInstance();
+    NetResult<QList<FileInfo>> resultData = network->getAllFiles((SortType)sortBy);
+
+    QList<FileInfo> sortedData;
+    if (resultData.isSuccess()) {
+        sortedData = *(resultData.data);
+    } else {
+        qWarning() << "Failed to get file list:" << resultData.status;
+        // 返回空列表
+    }
+
+    // 转换为QVariantList返回
+    QVariantList result;
+    for (const auto &file : sortedData) {
+        result.append(convertFileInfoToQVariant(file));
+    }
+
+    return result;
 }
+
+
+
 
 QVariant CloudFileManagerAdapter::getFileInfo(const QString& cloudId)
 {
-    // 空实现，具体功能后续添加
-    Q_UNUSED(cloudId)
-    return QVariant();
+    CloudFileNetWork *network = CloudFileNetWork::getInstance();
+    NetResult<FileInfo> resultData = network->getFileByFileID(CloudFileNetWork::IDFromString(cloudId));
+
+    if (resultData.isSuccess()) {
+        FileInfo fileData = *(resultData.data);
+        return convertFileInfoToQVariant(fileData);
+    } else {
+        qWarning() << "Failed to get file info:" << resultData.status;
+        // 返回空的QVariant
+        return QVariant();
+    }
 }
 
 void CloudFileManagerAdapter::downloadFile(const QString& cloudId,
@@ -56,30 +96,50 @@ void CloudFileManagerAdapter::downloadFile(const QString& cloudId,
 
 QVariantList CloudFileManagerAdapter::getUploadRecords(const QString& cloudId)
 {
-    // 空实现，具体功能后续添加
+    // For now, return empty list - in a real implementation this would query upload records
     Q_UNUSED(cloudId)
     return QVariantList();
 }
 
 QVariantList CloudFileManagerAdapter::getPullRecords(const QString& cloudId)
 {
-    // 空实现，具体功能后续添加
+    // For now, return empty list - in a real implementation this would query pull/download records
     Q_UNUSED(cloudId)
     return QVariantList();
 }
 
 QVariantList CloudFileManagerAdapter::getFileHistory(const QString& cloudId)
 {
-    // 空实现，具体功能后续添加
-    Q_UNUSED(cloudId)
-    return QVariantList();
+    CloudFileNetWork *network = CloudFileNetWork::getInstance();
+    NetResult<QList<VersionInfo>> resultData = network->getAllVersions(CloudFileNetWork::IDFromString(cloudId));
+
+    QList<VersionInfo> versions;
+    if (resultData.isSuccess()) {
+        versions = *(resultData.data);
+    } else {
+        qWarning() << "Failed to get file history:" << resultData.status;
+        // 返回空列表
+    }
+
+    QVariantList result;
+    for (const auto &version : versions) {
+        result.append(convertVersionInfoToQVariant(version));
+    }
+
+    return result;
 }
 
 void CloudFileManagerAdapter::createNewVersion(const QString& cloudId, const QString& description)
 {
-    // 空实现，具体功能后续添加
-    Q_UNUSED(cloudId)
-    Q_UNUSED(description)
+    CloudFileNetWork *network = CloudFileNetWork::getInstance();
+    // For demo purposes, we'll use a default file size of 0, which will be calculated in the actual implementation
+    NetResult<qint64> result = network->snapshotVersionForFile(CloudFileNetWork::IDFromString(cloudId), description);
+
+    if (result.isSuccess()) {
+        emit versionCreated(cloudId, true);
+    } else {
+        emit versionCreated(cloudId, false);
+    }
 }
 
 void CloudFileManagerAdapter::downloadVersion(const QString& cloudId, int versionId, const QString& targetPath)
@@ -114,7 +174,11 @@ QString CloudFileManagerAdapter::accountName() const
     // 空实现，具体功能后续添加
     return m_accountName;
 }
-
+QString CloudFileManagerAdapter::userName() const
+{
+    // 空实现，具体功能后续添加
+    return m_userName;
+}
 QString CloudFileManagerAdapter::deviceRemark() const
 {
     // 空实现，具体功能后续添加

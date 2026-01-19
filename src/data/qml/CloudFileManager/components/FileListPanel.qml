@@ -8,6 +8,9 @@ Rectangle {
     property real splitViewWidth: parent.width
     signal fileSelected(var fileData)
     
+    // 添加一个属性来存储当前排序方式
+    property int currentSortBy: 0
+    
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -16,8 +19,11 @@ Rectangle {
         SortToolbar {
             id: sortToolbar
             Layout.fillWidth: true
-            Layout.preferredHeight: 50
-            onSortChanged: root.adapter.getFileList(sortBy)
+            Layout.preferredHeight: 25
+            onSortChanged: {
+                root.currentSortBy = sortBy
+                loadFileList(sortBy)
+            }
         }
         
         // 文件列表
@@ -27,14 +33,14 @@ Rectangle {
             
             ListView {
                 id: fileListView
-                model: ListModel {}
+                model: []  // 初始化为空数组
                 spacing: 2
                 
                 delegate: FileItem {
                     width: fileListView.width
-                    fileData: model
+                    fileData: modelData  // 注意：使用modelData而不是model
                     adapter: root.adapter
-                    onClicked: root.fileSelected(model)
+                    onClicked: root.fileSelected(modelData)
                 }
                 
                 onContentYChanged: {
@@ -47,9 +53,32 @@ Rectangle {
         }
     }
     
+    // 加载文件列表的函数
+    function loadFileList(sortBy) {
+        var fileList = adapter.getFileList(sortBy)
+        if (fileList) {
+            fileListView.model = []
+            fileListView.model = fileList
+        } else {
+            fileListView.model = []
+        }
+    }
+    
+    // 刷新文件列表
+    function refresh() {
+        loadFileList(currentSortBy)
+    }
+    
     Component.onCompleted: {
         if (adapter) {
-            adapter.getFileList(0) // 默认按名称排序
+            loadFileList(0) // 默认按名称排序
+        }
+    }
+    
+    // 当adapter改变时重新加载
+    onAdapterChanged: {
+        if (adapter) {
+            loadFileList(currentSortBy)
         }
     }
 }

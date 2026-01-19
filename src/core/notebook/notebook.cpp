@@ -147,6 +147,35 @@ const QSharedPointer<Node> &Notebook::getRootNode() const {
   return m_root;
 }
 
+const QSharedPointer<Node> Notebook::FindNoteById(ID id) const
+{
+    auto rootNode = getRootNode();
+    if (!rootNode) {
+        return nullptr;
+    }
+
+    // 递归查找指定 ID 的节点
+    std::function<QSharedPointer<Node>(const QSharedPointer<Node>&)> findNode;
+    findNode = [&](const QSharedPointer<Node>& node) -> QSharedPointer<Node> {
+        if (node->getId() == id) {
+            return node;
+        }
+
+        // 递归检查子节点
+        const auto &children = node->getChildrenRef();
+        for (const auto &child : children) {
+            auto result = findNode(child);
+            if (result) {
+                return result;
+            }
+        }
+
+        return nullptr;
+    };
+
+    return findNode(rootNode);
+}
+
 QSharedPointer<Node> Notebook::newNode(Node *p_parent, Node::Flags p_flags, const QString &p_name,
                                        const QString &p_content) {
   return m_configMgr->newNode(p_parent, p_flags, p_name, p_content);
