@@ -45,9 +45,9 @@ void CloudFileManagerAdapter::logout()
 QVariantList CloudFileManagerAdapter::getFileList(int sortBy)
 {
     CloudFileNetWork *network = CloudFileNetWork::getInstance();
-    NetResult<QList<FileInfo>> resultData = network->getAllFiles((SortType)sortBy);
+    NetResult<QList<NetWorkFileInfo>> resultData = network->getAllFiles((SortType)sortBy);
 
-    QList<FileInfo> sortedData;
+    QList<NetWorkFileInfo> sortedData;
     if (resultData.isSuccess()) {
         sortedData = *(resultData.data);
     } else {
@@ -70,10 +70,10 @@ QVariantList CloudFileManagerAdapter::getFileList(int sortBy)
 QVariant CloudFileManagerAdapter::getFileInfo(const QString& cloudId)
 {
     CloudFileNetWork *network = CloudFileNetWork::getInstance();
-    NetResult<FileInfo> resultData = network->getFileByFileID(CloudFileNetWork::IDFromString(cloudId));
+    NetResult<NetWorkFileInfo> resultData = network->getFileByFileID(CloudFileNetWork::IDFromString(cloudId));
 
     if (resultData.isSuccess()) {
-        FileInfo fileData = *(resultData.data);
+        NetWorkFileInfo fileData = *(resultData.data);
         return convertFileInfoToQVariant(fileData);
     } else {
         qWarning() << "Failed to get file info:" << resultData.status;
@@ -111,9 +111,9 @@ QVariantList CloudFileManagerAdapter::getPullRecords(const QString& cloudId)
 QVariantList CloudFileManagerAdapter::getFileHistory(const QString& cloudId)
 {
     CloudFileNetWork *network = CloudFileNetWork::getInstance();
-    NetResult<QList<VersionInfo>> resultData = network->getAllVersions(CloudFileNetWork::IDFromString(cloudId));
+    NetResult<QList<NetWorkVersionInfo>> resultData = network->getAllVersions(CloudFileNetWork::IDFromString(cloudId));
 
-    QList<VersionInfo> versions;
+    QList<NetWorkVersionInfo> versions;
     if (resultData.isSuccess()) {
         versions = *(resultData.data);
     } else {

@@ -84,44 +84,44 @@ private:
     QString m_deviceRemark="test PC";
 
 
-    inline static QVariantMap convertFileInfoToQVariant(const FileInfo& fileInfo) {
+    inline static QVariantMap convertFileInfoToQVariant(const NetWorkFileInfo& fileInfo) {
         QVariantMap result;
-        
+
         // 1. 文件名称 (QML中需要)
         result["fileName"] = fileInfo.fileName.isEmpty() ? "未命名文件" : fileInfo.fileName;
-        
-        // 2. 云端ID (QML中需要，但FileInfo中没有cloudId字段，我们用fileID代替)
+
+        // 2. 云端ID (QML中需要，但NetWorkFileInfo中没有cloudId字段，我们用fileID代替)
         result["cloudId"] = QString::number(fileInfo.fileID);
-        
-        // 3. 描述 (QML中需要，但FileInfo中没有description字段，提供一个默认值)
+
+        // 3. 描述 (QML中需要，但NetWorkFileInfo中没有description字段，提供一个默认值)
         result["description"] = "这是一个文件";  // 默认描述
-        
-        // 4. 笔记本名称 (QML中需要，但FileInfo中没有notebookName字段，提供一个默认值)
+
+        // 4. 笔记本名称 (QML中需要，但NetWorkFileInfo中没有notebookName字段，提供一个默认值)
         result["notebookName"] = "默认笔记本";  // 默认笔记本名称
-        
+
         // 5. 最后更新 (QML中需要，将updateTime转换为字符串)
         if (fileInfo.updateTime.isValid()) {
             result["lastUpdate"] = fileInfo.updateTime.toString("yyyy-MM-dd hh:mm:ss");
         } else {
             result["lastUpdate"] = "未知时间";
         }
-        
+
         // 6. 创建时间 (虽然QML中没有直接使用，但可以添加进去)
         if (fileInfo.createTime.isValid()) {
             result["createTime"] = fileInfo.createTime.toString("yyyy-MM-dd hh:mm:ss");
         } else {
             result["createTime"] = "未知时间";
         }
-        
+
         // 7. 文件ID (添加进去，虽然不是QML中需要的字段名)
         result["fileID"] = fileInfo.fileID;
-        
+
         // 8. 最新版本ID (添加进去)
         result["latestVersionID"] = fileInfo.latestVersionID;
-        
+
         return result;
     }
-    static QVariantMap convertVersionInfoToQVariant(const VersionInfo& versionInfo, int versionNumber = 0, const QString& versionName = "") {
+    static QVariantMap convertVersionInfoToQVariant(const NetWorkVersionInfo& versionInfo, int versionNumber = 0, const QString& versionName = "") {
         QVariantMap result;
         
         // 1. 版本ID (QML中需要为versionId，注意大小写)

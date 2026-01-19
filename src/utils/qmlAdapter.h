@@ -7,16 +7,19 @@
 #include <QObject>
 #include <QVariant>
 #include <QTimer>
-
+#include <qcontainerfwd.h>
+#include <qlist.h>
+#include <qvariant.h>
+#include "QVariantList"
 namespace vnotex {
 
 struct NoteVersionInfo {
     vnotex::ID version;
-    QString time;
-    QString user;
-    QString hash;
-    bool isCurrent;
-    qint64 size;
+    QString time = "公园2233年";
+    QString user = "默认用户";
+    QString hash = "2233";
+    bool isCurrent = false;
+    qint64 size = 0;
     QString changeType;
     QString changeDescription;
     bool autoSave;
@@ -37,6 +40,12 @@ struct NoteVersionInfo {
 };
 
 struct NoteDetailsInfo {
+    enum syncStatus{
+        notLatest = 0,
+        isLatest = 1,
+        unSync = 2,
+        unknown = 3
+    };
     vnotex::ID id;
     QString name;
     QString cloudId;
@@ -44,7 +53,7 @@ struct NoteDetailsInfo {
     qint64 size;
     QString modifiedTime;
     QString createdTime;
-    int syncStatus;
+    syncStatus syncStatus;
     QString lastSyncTime;
     QString syncError;
     vnotex::ID currentVersion;
@@ -58,7 +67,7 @@ struct NoteDetailsInfo {
     int wordCount;
     int readCount;
     int editCount;
-
+    QList<NoteVersionInfo> versions;
     QVariantMap toVariantMap() const {
         QVariantMap map;
         map["id"] = static_cast<qulonglong>(id);
@@ -82,6 +91,12 @@ struct NoteDetailsInfo {
         map["wordCount"] = wordCount;
         map["readCount"] = readCount;
         map["editCount"] = editCount;
+        auto vers = QVariantList();
+        
+        for (auto i:versions) {
+            vers.append(i.toVariantMap());
+        }
+        map["versions"] = vers;
         return map;
     }
 };
@@ -106,6 +121,8 @@ public:
     Q_INVOKABLE void viewNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
     // 将其下载到本地,但是不打开
     Q_INVOKABLE void restoreNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
+    // 打开指定版本的笔记
+    Q_INVOKABLE void openNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
     // 获取详细信息
     Q_INVOKABLE QVariantMap getNoteDetails(vnotex::ID noteId, vnotex::ID notebookId);
 

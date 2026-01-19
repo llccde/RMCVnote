@@ -13,7 +13,7 @@ Rectangle {
     property int notebookId: -1
     property var adapter: null
     property int syncStatus: noteDetails.syncStatus // 0:不是最新(红), 1:是最新(绿), 2:未同步(灰), 3:后台自动同步(蓝)
-
+    //property bool historyListVisible : true;
     property bool expanded: false
     property var noteDetails: ({})
     property var versionList: []
@@ -26,6 +26,12 @@ Rectangle {
             var details = adapter.getNoteDetails(noteId, notebookId);
             if (details) {
                 root.noteDetails = details;
+                root.versionList = root.noteDetails.versions;
+                // if(noteDetails.syncStatus == 0||noteDetails.syncStatus == 1||noteDetails.syncStatus == 3){
+                //     historyListVisible = true;
+                // }else{
+                //     historyListVisible = false;
+                // }
             }
         }
     }
@@ -86,7 +92,7 @@ Rectangle {
                 
                 text: {
                     switch(root.syncStatus) {
-                    case 0: return "不是最新版本，需要同步";
+                    case 0: return "不是最新";
                     case 1: return "已同步，是最新版本";
                     case 2: return "未同步到云端";
                     case 3: return "后台自动同步中...";
@@ -105,20 +111,15 @@ Rectangle {
         onClicked: {
             root.expanded = !root.expanded;
             
-            // 如果展开，则获取详细信息
-            if (root.expanded && adapter && noteId !== 0 && notebookId !== -1) {
-                var details = adapter.getNoteDetails(noteId, notebookId);
-                if (details) {
-                    root.noteDetails = details;
+            // // 如果展开，则获取详细信息
+            // if (root.expanded && adapter && noteId !== 0 && notebookId !== -1) {
+            //     var details = adapter.getNoteDetails(noteId, notebookId);
+            //     if (details) {
+            //         root.noteDetails = details;
                     
-                    // 模拟版本列表（实际应从adapter获取）
-                    root.versionList = [
-                        {"version": 3, "time": "2023-10-15 14:30", "size": "2.1KB"},
-                        {"version": 2, "time": "2023-10-14 09:15", "size": "2.0KB"},
-                        {"version": 1, "time": "2023-10-13 16:45", "size": "1.9KB"}
-                    ];
-                }
-            }
+
+            //     }
+            // }
         }
     }
     Row {
@@ -258,9 +259,16 @@ Rectangle {
                         anchors.rightMargin: 10
                         
                         Label {
-                            text: "版本 " + modelData.version
+                            text: "版本 " + modelData.version+(modelData.isCurrent?"(当前)":"")
                             font.pixelSize: 10
-                            color: "#444"
+                            color: {
+                                if(!modelData.isCurrent){
+                                    return "#444"
+                                }else{
+                                    return '#17609b'
+                                }
+
+                                }
                             anchors.verticalCenter: parent.verticalCenter
                             width: 60
                         }
@@ -280,7 +288,13 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 60
                         }
-                        
+                        Label {
+                            text: modelData.changeDescription
+                            font.pixelSize: 10
+                            color: "#777"
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 60
+                        }
                         Button {
                             text: "查看"
                             flat: true
@@ -288,7 +302,7 @@ Rectangle {
                             onClicked: {
                                 viewVersionClicked(modelData.version);
                                 if (adapter) {
-                                    adapter.viewNoteVersion(noteId, notebookId, modelData.version);
+                                    adapter.openNoteVersion(noteId, notebookId, modelData.version);
                                 }
                             }
                             anchors.verticalCenter: parent.verticalCenter

@@ -6,14 +6,22 @@
 #include <QTimer>
 #include <QDebug>
 #include <qlist.h>
+#include <qlogging.h>
 #include <qobject.h>
+#include <qstringconverter_base.h>
 #include <qtmetamacros.h>
+#include <QStandardPaths>
+#include <QDir>
+#include <QFile>
+#include <QTextStream>
 #include "LocalDataOfUser.h"
 #include "CloudFileNetWork.h"
 #include "qmessagebox.h"
 #include "file.h"
 #include "widgets/dialogs/CloudSyncDialog.h"
 #include "widgets/mainwindow.h"
+#include "fileopenparameters.h"
+#include "buffermgr.h"
 using namespace vnotex;
 
 QmlAdapter::QmlAdapter(QObject *parent)
@@ -247,6 +255,67 @@ void QmlAdapter::restoreNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vn
     qDebug() << "Restoring note version:" << noteId << "from notebook:" << notebookId << "version:" << version;
 }
 
+// 打开指定版本的笔记
+void QmlAdapter::openNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version) {
+    qDebug() << "Opening note version:" << noteId << "from notebook:" << notebookId << "version:" << version;
+
+    // 获取笔记本和笔记信息
+    auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
+    if (!notebook) {
+        qWarning() << "Failed to find notebook with ID:" << notebookId;
+        return;
+    }
+
+    auto node = notebook->FindNoteById(noteId);
+    if (!node) {
+        qWarning() << "Failed to find note with ID:" << noteId << "in notebook:" << notebookId;
+        return;
+    }
+
+    // 获取云端ID
+    auto cloudID = LocalDataOfUser::getUser()->getMapping()->find({notebookId, noteId});
+    if (cloudID == LocalDataOfUser::getUser()->getMapping()->end()) {
+        qWarning() << "Note is not synced to cloud, cannot open version:" << version;
+        return;
+    }
+
+    // 获取版本内容
+    auto versionContent = CloudFileNetWork::getInstance()->getVersionContent(version);
+    if (versionContent.isFailure()) {
+        qWarning() << "Failed to get content of version:" << version << "Error:" << versionContent.status;
+        return;
+    }
+
+    // 创建临时文件路径
+    QString tempFileName = QString("temp-%1-%2-%3")
+                              .arg(notebook->getName())
+                              .arg(node->getName())
+                              .arg(version);
+
+    // 获取标准缓存目录作为临时存储位置
+    QString tempPath = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
+                          .absoluteFilePath(tempFileName);
+
+    // 写入临时文件
+    QFile tempFile(tempPath);
+    if (!tempFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Failed to create temporary file:" << tempPath;
+        return;
+    }
+
+    QTextStream out(&tempFile);
+    out.setEncoding(QStringConverter::Utf8);
+    out << *versionContent.data;
+    tempFile.close();
+
+    // 使用BufferMgr打开临时文件
+    auto paras = QSharedPointer<FileOpenParameters>::create();
+    paras->m_readOnly = true; // 版本文件应以只读方式打开
+    paras->m_sessionEnabled = false; // 不将临时文件保存到会话中
+
+    VNoteX::getInst().getBufferMgr().open(tempPath, paras);
+}
+
 // 获取笔记详细信息
 QVariantMap QmlAdapter::getNoteDetails(vnotex::ID noteId, vnotex::ID notebookId) {
     qDebug() << "Getting note details:" << noteId << "from notebook:" << notebookId;
@@ -255,17 +324,41 @@ QVariantMap QmlAdapter::getNoteDetails(vnotex::ID noteId, vnotex::ID notebookId)
     NoteDetailsInfo details;
     details.id = noteId;
     details.name = QString("笔记 %1").arg(static_cast<qulonglong>(noteId));
-    details.cloudId = QString("CLOUD-%1-%2").arg(static_cast<qulonglong>(notebookId)).arg(static_cast<qulonglong>(noteId));
+    
     details.filePath = QString("/notes/note_%1.md").arg(static_cast<qulonglong>(noteId));
     details.size = 2048; // 2KB
     details.modifiedTime = "2023-10-15 14:30:22";
     details.createdTime = "2023-10-13 16:45:10";
     
-    auto a = LocalDataOfUser::getUser()->getMapping()->find({notebookId,noteId});
-    if(a==LocalDataOfUser::getUser()->getMapping()->end()){
-        details.syncStatus = 0;
+    auto cloudID = LocalDataOfUser::getUser()->getMapping()->find({notebookId,noteId});
+    
+    if(cloudID==LocalDataOfUser::getUser()->getMapping()->end()){
+        //没有上传到云端
+        details.cloudId = "无";
+        details.syncStatus = NoteDetailsInfo::unSync;
     }else {
-        details.syncStatus = 1;
+        //处于同步状态
+        details.cloudId = *cloudID;
+        details.syncStatus = NoteDetailsInfo::isLatest;
+        auto versions = CloudFileNetWork::getInstance()->getAllVersions(CloudFileNetWork::IDFromString(*cloudID));
+        if(versions.isNotError()){
+            auto vers = versions.getData();
+            auto current = CloudFileNetWork::getInstance()->getLatestVersionID(CloudFileNetWork::IDFromString(*cloudID));
+            CloudFileNetWorkFileAndVersionID currentID = -1;
+
+            if(current.isNotError()){
+                currentID = current.getData();
+            }
+
+            for(auto i:vers){
+                NoteVersionInfo nvi;
+                nvi.version  = i.versionID;
+                nvi.changeDescription = i.description;
+                nvi.time = i.createTime.toString("yyyy-MM-dd hh:mm:ss");
+                nvi.isCurrent = (i.versionID == currentID);
+                details.versions.append(nvi);
+            }
+        }
     };
     details.lastSyncTime = "2023-10-15 14:35:00";
     details.syncError = "";

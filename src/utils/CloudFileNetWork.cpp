@@ -89,7 +89,7 @@ NetResult<bool> CloudFileNetWork::renameFile(CloudFileNetWorkFileAndVersionID fi
     return NetResult<bool>::success(QSharedPointer<bool>::create(true));
 }
 
-NetResult<FileInfo> CloudFileNetWork::getFileByFileID(CloudFileNetWorkFileAndVersionID fileID)
+NetResult<NetWorkFileInfo> CloudFileNetWork::getFileByFileID(CloudFileNetWorkFileAndVersionID fileID)
 {
     QSqlQuery query(m_database);
     query.prepare("SELECT FileID, FileName, UpdateTime, CreateTime, LatestVersionID FROM File WHERE FileID = ?");
@@ -97,15 +97,15 @@ NetResult<FileInfo> CloudFileNetWork::getFileByFileID(CloudFileNetWorkFileAndVer
 
     if (!query.exec()) {
         qWarning() << "Failed to get file by ID:" << query.lastError().text();
-        return NetResult<FileInfo>::failure(DatabaseQueryFailed);
+        return NetResult<NetWorkFileInfo>::failure(DatabaseQueryFailed);
     }
 
     if (!query.next()) {
         qWarning() << "File not found with ID:" << fileID;
-        return NetResult<FileInfo>::failure(FileIDNotFound);
+        return NetResult<NetWorkFileInfo>::failure(FileIDNotFound);
     }
 
-    FileInfo fileInfo = FileInfo(
+    NetWorkFileInfo fileInfo = NetWorkFileInfo(
         query.value(0).toLongLong(),
         query.value(1).toString(),
         QDateTime::fromString(query.value(2).toString(), Qt::ISODateWithMs),
@@ -113,7 +113,7 @@ NetResult<FileInfo> CloudFileNetWork::getFileByFileID(CloudFileNetWorkFileAndVer
         query.value(4).toLongLong()
     );
 
-    return NetResult<FileInfo>::success(QSharedPointer<FileInfo>::create(fileInfo));
+    return NetResult<NetWorkFileInfo>::success(QSharedPointer<NetWorkFileInfo>::create(fileInfo));
 }
 
 NetResult<CloudFileNetWorkFileAndVersionID> CloudFileNetWork::addFile(const QString &fileName, const QString &initialContent, const QString &description)
@@ -252,9 +252,9 @@ NetResult<bool> CloudFileNetWork::updateFileContent(CloudFileNetWorkFileAndVersi
     return updateTimeResult;
 }
 
-NetResult<QList<VersionInfo>> CloudFileNetWork::getAllVersions(CloudFileNetWorkFileAndVersionID fileID)
+NetResult<QList<NetWorkVersionInfo>> CloudFileNetWork::getAllVersions(CloudFileNetWorkFileAndVersionID fileID)
 {
-    QList<VersionInfo> versions; // 创建局部变量
+    QList<NetWorkVersionInfo> versions; // 创建局部变量
 
     QSqlQuery query(m_database);
     query.prepare("SELECT VersionID, FileID, CreateTime, Description FROM VersionFile WHERE FileID = ? ORDER BY CreateTime DESC");
@@ -262,11 +262,11 @@ NetResult<QList<VersionInfo>> CloudFileNetWork::getAllVersions(CloudFileNetWorkF
 
     if (!query.exec()) {
         qWarning() << "Failed to get versions:" << query.lastError().text();
-        return NetResult<QList<VersionInfo>>::failure(VersionRetrievalFailed);
+        return NetResult<QList<NetWorkVersionInfo>>::failure(VersionRetrievalFailed);
     }
 
     while (query.next()) {
-        VersionInfo info(
+        NetWorkVersionInfo info(
             query.value(0).toLongLong(),
             query.value(1).toLongLong(),
             QDateTime::fromString(query.value(2).toString(), Qt::ISODateWithMs),
@@ -276,7 +276,7 @@ NetResult<QList<VersionInfo>> CloudFileNetWork::getAllVersions(CloudFileNetWorkF
         versions.append(info);
     }
 
-    return NetResult<QList<VersionInfo>>::success(QSharedPointer<QList<VersionInfo>>::create(versions));
+    return NetResult<QList<NetWorkVersionInfo>>::success(QSharedPointer<QList<NetWorkVersionInfo>>::create(versions));
 }
 
 NetResult<QString> CloudFileNetWork::getVersionContent(CloudFileNetWorkFileAndVersionID versionID)
@@ -299,9 +299,9 @@ NetResult<QString> CloudFileNetWork::getVersionContent(CloudFileNetWorkFileAndVe
     return NetResult<QString>::success(QSharedPointer<QString>::create(content));
 }
 
-NetResult<QList<FileInfo>> CloudFileNetWork::getAllFiles(SortType sortBy)
+NetResult<QList<NetWorkFileInfo>> CloudFileNetWork::getAllFiles(SortType sortBy)
 {
-    QList<FileInfo> files; // 创建局部变量
+    QList<NetWorkFileInfo> files; // 创建局部变量
 
     QSqlQuery query(m_database);
     QString sql = "SELECT FileID, FileName, UpdateTime, CreateTime, LatestVersionID FROM File ";
@@ -322,11 +322,11 @@ NetResult<QList<FileInfo>> CloudFileNetWork::getAllFiles(SortType sortBy)
 
     if (!query.exec(sql)) {
         qWarning() << "Failed to get all files:" << query.lastError().text();
-        return NetResult<QList<FileInfo>>::failure(DatabaseQueryFailed);
+        return NetResult<QList<NetWorkFileInfo>>::failure(DatabaseQueryFailed);
     }
 
     while (query.next()) {
-        FileInfo info(
+        NetWorkFileInfo info(
             query.value(0).toLongLong(),
             query.value(1).toString(),
             QDateTime::fromString(query.value(2).toString(), Qt::ISODateWithMs),
@@ -336,7 +336,7 @@ NetResult<QList<FileInfo>> CloudFileNetWork::getAllFiles(SortType sortBy)
         files.append(info);
     }
 
-    return NetResult<QList<FileInfo>>::success(QSharedPointer<QList<FileInfo>>::create(files));
+    return NetResult<QList<NetWorkFileInfo>>::success(QSharedPointer<QList<NetWorkFileInfo>>::create(files));
 }
 
 NetResult<bool> CloudFileNetWork::deleteFile(CloudFileNetWorkFileAndVersionID fileID)
@@ -600,16 +600,16 @@ void CloudFileNetWork::addExampleData()
         qDebug() << "版本总数: 15 (每个文件3个版本)";
 
         // 验证数据
-        NetResult<QList<FileInfo>> allFilesResult = getAllFiles(SORT_BY_CREATE_TIME);
+        NetResult<QList<NetWorkFileInfo>> allFilesResult = getAllFiles(SORT_BY_CREATE_TIME);
         if (allFilesResult.isSuccess()) {
-            QList<FileInfo> allFiles = *(allFilesResult.data);
+            QList<NetWorkFileInfo> allFiles = *(allFilesResult.data);
             qDebug() << "实际文件数量:" << allFiles.size();
 
             int totalVersions = 0;
-            for (const FileInfo& file : allFiles) {
-                NetResult<QList<VersionInfo>> versionsResult = getAllVersions(file.fileID);
+            for (const NetWorkFileInfo& file : allFiles) {
+                NetResult<QList<NetWorkVersionInfo>> versionsResult = getAllVersions(file.fileID);
                 if (versionsResult.isSuccess()) {
-                    QList<VersionInfo> versions = *(versionsResult.data);
+                    QList<NetWorkVersionInfo> versions = *(versionsResult.data);
                     totalVersions += versions.size();
                     qDebug() << "文件" << file.fileID << file.fileName << "有" << versions.size() << "个版本";
                 } else {

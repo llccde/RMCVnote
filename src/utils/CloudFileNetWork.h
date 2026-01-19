@@ -10,6 +10,7 @@
 #include <QVariant>
 #include <QSharedPointer>
 #include <qcontainerfwd.h>
+#include <qlogging.h>
 #include <qobject.h>
 using CloudFileNetWorkFileAndVersionID = qint64;
 // 错误状态枚举，定义所有可能的失败情况
@@ -74,6 +75,15 @@ public:
     // 检查操作是否成功
     inline bool isSuccess() const {
         return status == Success;
+    }
+    //顺便输出错误信息
+    inline bool isNotError() const{
+        if(isSuccess()){
+            return true;
+        }else {
+            qWarning()<<errorToString();
+            return false;
+        }
     }
 
     // 检查操作是否失败
@@ -150,29 +160,29 @@ enum SortType {
     SORT_BY_CREATE_TIME = 2  // 创建时间（默认按创建时间降序，最新在前）
 };
 // 版本文件信息结构体
-struct VersionInfo {
+struct NetWorkVersionInfo {
     qint64 versionID;
     qint64 fileID;
     QDateTime createTime;
     QString content;
     QString description;
-    
-    VersionInfo() : versionID(0), fileID(0) {}
-    VersionInfo(qint64 vid, qint64 fid, const QDateTime& ct, 
+    bool isCurrent = false;
+    NetWorkVersionInfo() : versionID(0), fileID(0) {}
+    NetWorkVersionInfo(qint64 vid, qint64 fid, const QDateTime& ct, 
                 const QString& cnt, const QString& desc)
         : versionID(vid), fileID(fid), createTime(ct), content(cnt), description(desc) {}
 };
 
 // 文件信息结构体
-struct FileInfo {
+struct NetWorkFileInfo {
     qint64 fileID;
     QString fileName;
     QDateTime updateTime;
     QDateTime createTime;
     qint64 latestVersionID;
 
-    FileInfo() : fileID(0), latestVersionID(0) {}
-    FileInfo(qint64 fid, const QString& name, const QDateTime& ut,
+    NetWorkFileInfo() : fileID(0), latestVersionID(0) {}
+    NetWorkFileInfo(qint64 fid, const QString& name, const QDateTime& ut,
              const QDateTime& ct, qint64 lvid)
         : fileID(fid), fileName(name), updateTime(ut), createTime(ct), latestVersionID(lvid) {}
 };
@@ -205,7 +215,7 @@ public:
     NetResult<bool> renameFile(qint64 fileID, const QString &newName);
 
     // 根据文件ID获取文件信息
-    NetResult<FileInfo> getFileByFileID(qint64 fileID);
+    NetResult<NetWorkFileInfo> getFileByFileID(qint64 fileID);
 
     // 添加新文件，返回包含新文件ID的结果
     NetResult<qint64> addFile(const QString &fileName, const QString &initialContent = "",
@@ -218,17 +228,19 @@ public:
     NetResult<bool> updateFileContent(qint64 fileID, const QString &newContent);
 
     // 获取文件的所有版本信息（不包含content）
-    NetResult<QList<VersionInfo>> getAllVersions(qint64 fileID);
+    NetResult<QList<NetWorkVersionInfo>> getAllVersions(qint64 fileID);
 
     // 根据版本ID获取版本内容
     NetResult<QString> getVersionContent(qint64 versionID);
 
     // 获取所有文件列表
-    NetResult<QList<FileInfo>> getAllFiles(SortType sortBy = SORT_BY_CREATE_TIME);
+    NetResult<QList<NetWorkFileInfo>> getAllFiles(SortType sortBy = SORT_BY_CREATE_TIME);
 
     // 删除文件及其所有版本
     NetResult<bool> deleteFile(qint64 fileID);
 
+    // 获取文件的最新版本ID
+    NetResult<qint64> getLatestVersionID(qint64 fileID);
 private:
     QSqlDatabase m_database;
 
@@ -238,8 +250,8 @@ private:
     // 获取当前时间戳字符串
     QString getCurrentTimestamp();
 
-    // 获取文件的最新版本ID
-    NetResult<qint64> getLatestVersionID(qint64 fileID);
+    
+    
 
     // 更新文件的更新时间
     NetResult<bool> updateFileTime(qint64 fileID);
