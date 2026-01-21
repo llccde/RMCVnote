@@ -32,6 +32,7 @@ Page {
             // 左侧文件列表区域
             FileListPanel {
                 id: leftPanel
+                visible:adapter.isLoggedIn
                 SplitView.preferredWidth: parent.width
                 SplitView.minimumWidth: 300
                 adapter: root.managerAdapter

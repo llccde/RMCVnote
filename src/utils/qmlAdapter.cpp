@@ -26,12 +26,13 @@ using namespace vnotex;
 
 QmlAdapter::QmlAdapter(QObject *parent)
     : QObject(parent),
-      m_syncStatus("idle")
+      m_backendStatus(Idle),
+      m_statusMessage("就绪")
 {
     setupConnections();
 }
 
-void QmlAdapter::setupConnections(  ) 
+void QmlAdapter::setupConnections(  )
 {
     // 连接笔记本管理器信号
     connect(&VNoteX::getInst().getNotebookMgr(), &NotebookMgr::notebooksUpdated, this, [this]() {
@@ -56,28 +57,41 @@ void QmlAdapter::setupConnections(  )
     emit notebookListChanged(getNotebooks());
 }
 
-QString QmlAdapter::syncStatus() const {
-    return m_syncStatus;
+int QmlAdapter::backendStatus() const {
+    return m_backendStatus;
 }
 
-void QmlAdapter::setSyncStatus(const QString &status) {
-    if (m_syncStatus != status) {
-        m_syncStatus = status;
-        emit syncStatusChanged(status);
+void QmlAdapter::setBackendStatus(int status) {
+    if (m_backendStatus != status) {
+        m_backendStatus = status;
+        emit backendStatusChanged(status);
+    }
+}
+
+QString QmlAdapter::statusMessage() const {
+    return m_statusMessage;
+}
+
+void QmlAdapter::setStatusMessage(const QString &message) {
+    if (m_statusMessage != message) {
+        m_statusMessage = message;
+        emit statusMessageChanged(message);
     }
 }
 
 // 刷新笔记本列表
 void QmlAdapter::refreshNotebooks() {
     qDebug() << "Refreshing notebooks...";
-    setSyncStatus("syncing");
-    
+    setBackendStatus(Processing);
+    setStatusMessage("正在刷新笔记本列表...");
+
     // 获取笔记本列表
     QVariantList notebooks = getNotebooks();
     emit notebookListChanged(notebooks);
-    
+
     QTimer::singleShot(1000, this, [this]() {
-        setSyncStatus("idle");
+        setBackendStatus(Idle);
+        setStatusMessage("刷新完成");
     });
 }
 
@@ -142,12 +156,14 @@ QVariantList QmlAdapter::getNotes(vnotex::ID notebookId) const {
 // 同步所有笔记本
 void QmlAdapter::syncAllNotebooks() {
     qDebug() << "Syncing all notebooks...";
-    setSyncStatus("syncing");
-    
+    setBackendStatus(Processing);
+    setStatusMessage("正在同步所有笔记本...");
+
     // 模拟同步过程
     QTimer::singleShot(2000, this, [this]() {
-        setSyncStatus("success");
-        
+        setBackendStatus(Idle);
+        setStatusMessage("所有笔记本同步完成");
+
         // 刷新显示
         refreshNotebooks();
     });
@@ -156,10 +172,12 @@ void QmlAdapter::syncAllNotebooks() {
 // 同步单个笔记本
 void QmlAdapter::syncNotebook(vnotex::ID notebookId) {
     qDebug() << "Syncing notebook:" << notebookId;
-    setSyncStatus("syncing");
+    setBackendStatus(Processing);
+    setStatusMessage("正在同步笔记本: " + QString::number(notebookId));
 
     QTimer::singleShot(1500, this, [this, notebookId]() {
-        setSyncStatus("success");
+        setBackendStatus(Idle);
+        setStatusMessage("笔记本 " + QString::number(notebookId) + " 同步完成");
         qDebug() << "Notebook" << notebookId << "synced successfully";
     });
 }
@@ -167,7 +185,8 @@ void QmlAdapter::syncNotebook(vnotex::ID notebookId) {
 // 同步单个笔记
 void QmlAdapter::syncNote(vnotex::ID noteId, vnotex::ID notebookId) {
     qDebug() << "Syncing note:" << noteId << "from notebook:" << notebookId;
-    setSyncStatus("syncing");
+    setBackendStatus(Processing);
+    setStatusMessage("正在同步笔记: " + QString::number(noteId) + " 来自笔记本: " + QString::number(notebookId));
 
     auto mapping = LocalDataOfUser::getUser()->getMapping();
     auto backend = CloudFileNetWork::getInstance();
@@ -179,10 +198,13 @@ void QmlAdapter::syncNote(vnotex::ID noteId, vnotex::ID notebookId) {
         auto mb = QMessageBox();
         mb.setText("note book not found");
         mb.exec();
+        setBackendStatus(Error);
+        setStatusMessage("笔记本未找到");
+        return;
     }
     if(mapping->has({notebookId,noteId})){
-        auto cloudFileID = mapping->value({notebookId,noteId}); 
-        
+        auto cloudFileID = mapping->value({notebookId,noteId});
+
         auto b = backend->updateFileContent(
             CloudFileNetWork::IDFromString(cloudFileID),
             note->getContentFile()->read());
@@ -197,14 +219,15 @@ void QmlAdapter::syncNote(vnotex::ID noteId, vnotex::ID notebookId) {
             dialog.exec();
         }
         else {
-            setSyncStatus("success");
+            setBackendStatus(Idle);
+            setStatusMessage("笔记 " + QString::number(noteId) + " 同步完成");
         }
     }else {
         auto dialog = CloudSyncDialog(
             VNoteX::getInst().getMainWindow()
             ,[&](const CloudSyncDialog::SubmitConfig& config){
                 if(config.mode == CloudSyncDialog::OperationMode::SelectExisting){
-                    (*mapping)[{notebookId,noteId}] = config.selectedId;            
+                    (*mapping)[{notebookId,noteId}] = config.selectedId;
                 }else {
                     NetResult<CloudFileNetWorkFileAndVersionID> res = backend->addFile(
                         config.newFileName
@@ -214,18 +237,19 @@ void QmlAdapter::syncNote(vnotex::ID noteId, vnotex::ID notebookId) {
                         return res.errorToString();
                     }
                     (*mapping)[{notebookId,noteId}] = CloudFileNetWork::IDToString(res.getData());
-                    
+
                 }
                 emit noteDetailsChanged(noteId,notebookId);
                 return QString();
             }
         );
         dialog.exec();
-        
+        setBackendStatus(Idle);
+        setStatusMessage("新笔记 " + QString::number(noteId) + " 已添加到云端");
 
     }
-    
-    
+
+
 
 }
 
@@ -284,17 +308,23 @@ void QmlAdapter::addNotebook() {
 // 保存笔记到云端
 void QmlAdapter::saveToCloud(vnotex::ID notebookId, vnotex::ID noteId) {
     qDebug() << "Saving note to cloud:" << noteId << "from notebook:" << notebookId;
+    setBackendStatus(Processing);
+    setStatusMessage("正在保存笔记到云端: " + QString::number(noteId));
 
     // 获取笔记本和笔记信息
     auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
     if (!notebook) {
         qWarning() << "Failed to find notebook with ID:" << notebookId;
+        setBackendStatus(Error);
+        setStatusMessage("笔记本未找到: " + QString::number(notebookId));
         return;
     }
 
     auto node = notebook->FindNoteById(noteId);
     if (!node) {
         qWarning() << "Failed to find note with ID:" << noteId << "in notebook:" << notebookId;
+        setBackendStatus(Error);
+        setStatusMessage("笔记未找到: " + QString::number(noteId));
         return;
     }
 
@@ -302,6 +332,8 @@ void QmlAdapter::saveToCloud(vnotex::ID notebookId, vnotex::ID noteId) {
     auto contentFile = node->getContentFile();
     if (!contentFile) {
         qWarning() << "Failed to get content file for note:" << noteId;
+        setBackendStatus(Error);
+        setStatusMessage("无法获取笔记内容文件: " + QString::number(noteId));
         return;
     }
 
@@ -311,6 +343,8 @@ void QmlAdapter::saveToCloud(vnotex::ID notebookId, vnotex::ID noteId) {
         content = contentFile->read();
     } catch (const std::exception &e) {
         qWarning() << "Failed to read content from note file:" << e.what();
+        setBackendStatus(Error);
+        setStatusMessage("读取笔记内容失败: " + QString::fromStdString(e.what()));
         return;
     }
 
@@ -321,6 +355,8 @@ void QmlAdapter::saveToCloud(vnotex::ID notebookId, vnotex::ID noteId) {
     // 如果笔记未同步到云端，则不进行任何操作
     if (cloudIDIter == mapping->end()) {
         qWarning() << "Note is not synced to cloud, cannot save to cloud";
+        setBackendStatus(Error);
+        setStatusMessage("笔记未同步到云端，无法保存: " + QString::number(noteId));
         emit syncErrorOccurred("Note is not synced to cloud, cannot save to cloud");
         return;
     }
@@ -332,12 +368,15 @@ void QmlAdapter::saveToCloud(vnotex::ID notebookId, vnotex::ID noteId) {
 
     if (result.isFailure()) {
         qWarning() << "Failed to update file content in cloud:" << result.errorToString();
+        setBackendStatus(Error);
+        setStatusMessage("更新云端文件内容失败: " + result.errorToString());
         emit syncErrorOccurred(result.errorToString());
         return;
     }
 
     qDebug() << "Successfully updated note content in cloud";
-    setSyncStatus("success");
+    setBackendStatus(Idle);
+    setStatusMessage("笔记 " + QString::number(noteId) + " 已成功保存到云端");
 
     // 发出信号通知界面更新
     emit noteDetailsChanged(noteId, notebookId);

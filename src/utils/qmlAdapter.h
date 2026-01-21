@@ -110,13 +110,25 @@ struct NoteDetailsInfo {
 class QmlAdapter : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString syncStatus READ syncStatus WRITE setSyncStatus NOTIFY syncStatusChanged)
-    
+    Q_PROPERTY(int backendStatus READ backendStatus WRITE setBackendStatus NOTIFY backendStatusChanged)
+    Q_PROPERTY(QString statusMessage READ statusMessage WRITE setStatusMessage NOTIFY statusMessageChanged)
+
 public:
     explicit QmlAdapter(QObject *parent = nullptr);
-    
-    QString syncStatus() const;
-    void setSyncStatus(const QString &status);
+
+    // Backend status枚举
+    enum BackendStatus {
+        Idle = 0,
+        Processing = 1,
+        Error = 2
+    };
+    Q_ENUM(BackendStatus)
+
+    int backendStatus() const;
+    void setBackendStatus(int status);
+
+    QString statusMessage() const;
+    void setStatusMessage(const QString &message);
     
     // 供QML调用的方法
     Q_INVOKABLE void refreshNotebooks();
@@ -152,7 +164,8 @@ public:
     Q_INVOKABLE void getCloudFileName(vnotex::ID notebookId, vnotex::ID noteId);
 
 signals:
-    void syncStatusChanged(const QString &status);
+    void backendStatusChanged(int status);
+    void statusMessageChanged(const QString &message);
     void notebookListChanged(const QVariantList &notebooks);
     void noteListChanged(vnotex::ID notebookId, const QVariantList &notes);
     void noteDetailsChanged(vnotex::ID changedNoteId, vnotex::ID changedNotebookId);
@@ -165,8 +178,9 @@ signals:
     
 private:
     void setupConnections();
-    
-    QString m_syncStatus;
+
+    int m_backendStatus;
+    QString m_statusMessage;
 };
 
 } // namespace vnotex

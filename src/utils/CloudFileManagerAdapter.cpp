@@ -33,15 +33,15 @@ CloudFileManagerAdapter::CloudFileManagerAdapter(QObject *parent)
 
 void CloudFileManagerAdapter::login(const QString& username, const QString& password, bool remember)
 {
-    // 空实现，具体功能后续添加
-    Q_UNUSED(username)
-    Q_UNUSED(password)
-    Q_UNUSED(remember)
+    m_accountName = username;
+    m_isLoggedIn = true;
+    emit loginStatusChanged(m_isLoggedIn);
 }
 
 void CloudFileManagerAdapter::logout()
 {
-    // 空实现，具体功能后续添加
+    m_isLoggedIn = false;
+    emit loginStatusChanged(m_isLoggedIn);
 }
 
 

@@ -28,8 +28,12 @@ Rectangle {
             lastSyncLabel.text = "上次同步: " + now.toLocaleTimeString(Qt.locale(), "HH:mm:ss")
         }
 
-        onSyncStatusChanged: function(status) {
-            console.log("Sync status changed to:", status)
+        onBackendStatusChanged: function(status) {
+            console.log("Backend status changed to:", status)
+        }
+
+        onStatusMessageChanged: function(message) {
+            console.log("Status message changed to:", message)
         }
 
         onNoteListChanged: function(notebookId, notes) {
@@ -47,7 +51,8 @@ Rectangle {
         }
     }
 
-    property string syncStatus: adapter.syncStatus
+    property int backendStatus: adapter.backendStatus
+    property string statusMessage: adapter.statusMessage
 
     Component.onCompleted: {
         console.log("CloudSyncPanel QML loaded")
@@ -80,39 +85,50 @@ Rectangle {
             }
 
             // 同步状态指示器
-            RowLayout {
-                spacing: 5
+            Column {
                 Layout.alignment: Qt.AlignRight
 
-                Rectangle {
-                    id: statusIndicator
-                    width: 12
-                    height: 12
-                    radius: 6
-                    color: {
-                        switch(syncStatus) {
-                        case "idle": return "gray"
-                        case "processing": return "orange"
-                        case "success": return "green"
-                        case "error": return "red"
-                        default: return "gray"
+                Row {
+                    spacing: 5
+
+                    Rectangle {
+                        id: statusIndicator
+                        width: 12
+                        height: 12
+                        radius: 6
+                        color: {
+                            switch(backendStatus) {
+                            case 0: return "gray"  // Idle
+                            case 1: return "orange" // Processing
+                            case 2: return "red"    // Error
+                            default: return "red"
+                            }
                         }
+                    }
+
+                    Label {
+                        id: statusLabel
+                        text: {
+                            switch(backendStatus) {
+                            case 0: return "空闲"
+                            case 1: return "处理中"
+                            case 2: return "错误"
+                            default: return "未知"
+                            }
+                        }
+                        color: "#666"
+                        font.pixelSize: 12
                     }
                 }
 
+                // 显示详细状态消息
                 Label {
-                    id: statusLabel
-                    text: {
-                        switch(syncStatus) {
-                        case "idle": return "空闲"
-                        case "processing": return "正在执行"
-                        case "success": return "成功"
-                        case "error": return "失败:"+syncStatus
-                        default: return syncStatus
-                        }
-                    }
+                    id: statusMessageLabel
+                    text: statusMessage
                     color: "#666"
-                    font.pixelSize: 12
+                    font.pixelSize: 10
+                    Layout.maximumWidth: 200
+                    wrapMode: Text.Wrap
                 }
             }
 
