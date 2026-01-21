@@ -57,7 +57,7 @@ public:
                           const QSharedPointer<INotebookBackend> &p_backend) const;
 
   void loadNotebooks();
-
+  QSharedPointer<Notebook> findNotebookWithGivenName(const QString &name) const;
   QSharedPointer<Notebook> newNotebook(const QSharedPointer<NotebookParameters> &p_parameters);
 
   void importNotebook(const QSharedPointer<Notebook> &p_notebook);

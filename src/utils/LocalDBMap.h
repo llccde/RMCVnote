@@ -47,7 +47,9 @@ public:
             m_db.close();
         }
     }
-    inline QList<Key> getKeyByValue(Value v){
+ 
+    // 根据值获取所有匹配的键
+    inline QList<Key> getKeysByValue(const Value &v) const {
         QList<Key> keys;
         for (auto it = this->constBegin(); it != this->constEnd(); ++it) {
             if (it.value() == v) {

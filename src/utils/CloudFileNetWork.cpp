@@ -357,6 +357,49 @@ NetResult<bool> CloudFileNetWork::deleteFile(CloudFileNetWorkFileAndVersionID fi
     return NetResult<bool>::success(QSharedPointer<bool>::create(true));
 }
 
+NetResult<bool> CloudFileNetWork::deleteFileVersion(CloudFileNetWorkFileAndVersionID fileID, CloudFileNetWorkFileAndVersionID versionID)
+{
+    // 首先检查版本是否存在且属于指定文件
+    QSqlQuery checkQuery(m_database);
+    checkQuery.prepare("SELECT VersionID FROM VersionFile WHERE VersionID = ? AND FileID = ?");
+    checkQuery.addBindValue(versionID);
+    checkQuery.addBindValue(fileID);
+
+    if (!checkQuery.exec() || !checkQuery.next()) {
+        qWarning() << "Version not found or does not belong to file:" << versionID << "File:" << fileID;
+        return NetResult<bool>::failure(VersionRetrievalFailed);
+    }
+
+    // 检查是否是最新版本，不允许删除最新版本
+    NetResult<CloudFileNetWorkFileAndVersionID> latestVersionResult = getLatestVersionID(fileID);
+    if (latestVersionResult.isFailure()) {
+        qWarning() << "Failed to get latest version ID for file:" << fileID;
+        return NetResult<bool>::failure(LatestVersionNotFound);
+    }
+
+    CloudFileNetWorkFileAndVersionID latestVersionID = *(latestVersionResult.data);
+    if (versionID == latestVersionID) {
+        qWarning() << "Cannot delete latest version:" << versionID;
+        return NetResult<bool>::failure(VersionRetrievalFailed); // 使用合适的错误码
+    }
+
+    // 删除指定版本
+    QSqlQuery query(m_database);
+    query.prepare("DELETE FROM VersionFile WHERE VersionID = ?");
+    query.addBindValue(versionID);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to delete version:" << query.lastError().text();
+        return NetResult<bool>::failure(SqlExecutionError);
+    }
+
+    if (query.numRowsAffected() == 0) {
+        return NetResult<bool>::failure(VersionRetrievalFailed);
+    }
+
+    return NetResult<bool>::success(QSharedPointer<bool>::create(true));
+}
+
 NetResult<bool> CloudFileNetWork::createTables()
 {
     QSqlQuery query(m_database);

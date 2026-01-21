@@ -5,6 +5,10 @@
 #include <QDateTime>
 #include <qcontainerfwd.h>
 #include <qtmetamacros.h>
+#include <QDir>
+#include <QFile>
+#include <QTextStream>
+#include <QFileDialog>
 #include "CloudFileNetWork.h" 
 #ifndef CLOUDFILEMANAGERADAPTER_H
 #define CLOUDFILEMANAGERADAPTER_H
@@ -55,7 +59,10 @@ public:
     Q_INVOKABLE void downloadVersion(const QString& cloudId, int versionId, const QString& targetPath);
     // 路径选择
     Q_INVOKABLE QString explore(const QString& title = "选择路径");
-    
+
+    // 笔记本列表
+    Q_INVOKABLE QVariantList getNotebookList();
+
     // 属性访问器
     QString networkStatus() const;
     bool isLoggedIn() const;

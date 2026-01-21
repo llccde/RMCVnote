@@ -291,6 +291,16 @@ QSharedPointer<Notebook> NotebookMgr::findNotebookById(ID p_id) const {
   return nullptr;
 }
 
+QSharedPointer<Notebook> NotebookMgr::findNotebookWithGivenName(const QString &name) const {
+  for (auto &nb : m_notebooks) {
+    if (nb->getName() == name) {
+      return nb;
+    }
+  }
+
+  return nullptr;
+}
+
 void NotebookMgr::closeNotebook(ID p_id) {
   auto it =
       std::find_if(m_notebooks.begin(), m_notebooks.end(),

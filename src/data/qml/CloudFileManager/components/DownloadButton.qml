@@ -7,6 +7,24 @@ Button {
     property var fileData
     property var adapter
     property string localPath: ""
+    property var notebookList: []
+
+    // 在组件加载时获取笔记本列表
+    Component.onCompleted: {
+        updateNotebookList();
+    }
+
+    // 监听 adapter 变化
+    onAdapterChanged: {
+        updateNotebookList();
+    }
+
+    // 更新笔记本列表的函数
+    function updateNotebookList() {
+        if (adapter) {
+            root.notebookList = adapter.getNotebookList()
+        }
+    }
     
     text: "下载"
     flat: true
@@ -20,7 +38,10 @@ Button {
         border.width: 1
     }
     
-    onClicked: downloadDialog.open()
+    onClicked: {
+        updateNotebookList();
+        downloadDialog.open();
+    }
     
     Dialog {
         parent: Overlay.overlay
@@ -58,7 +79,7 @@ Button {
                 id: notebookCombo
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40  // 设置推荐高度
-                model: ["笔记本A", "笔记本B", "笔记本C"]
+                model: root.notebookList
                 enabled: specificNotebookRadio.checked
                 visible: specificNotebookRadio.checked
                 Layout.leftMargin: 20  // 缩进显示

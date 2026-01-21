@@ -9,7 +9,9 @@
 #include <QTimer>
 #include <qcontainerfwd.h>
 #include <qlist.h>
+#include <qtmetamacros.h>
 #include <qvariant.h>
+#include <string>
 #include "QVariantList"
 namespace vnotex {
 
@@ -46,6 +48,7 @@ struct NoteDetailsInfo {
         unSync = 2,
         unknown = 3
     };
+    QList<QString> conflictWith;
     vnotex::ID id;
     QString name;
     QString cloudId;
@@ -92,11 +95,15 @@ struct NoteDetailsInfo {
         map["readCount"] = readCount;
         map["editCount"] = editCount;
         auto vers = QVariantList();
-        
+        auto conflicts = QVariantList();
         for (auto i:versions) {
             vers.append(i.toVariantMap());
         }
+        for (auto i : conflictWith) {
+            conflicts.append(i);
+        }
         map["versions"] = vers;
+        map["conflictWith"] = conflicts;
         return map;
     }
 };
@@ -116,10 +123,10 @@ public:
     Q_INVOKABLE QVariantList getNotebooks() const;
     Q_INVOKABLE QVariantList getNotes(vnotex::ID notebookId) const;
     Q_INVOKABLE void addNotebook();
+    Q_INVOKABLE void saveToCloud(vnotex::ID notebookId,vnotex::ID noteId);
 
-    // 在编辑器中打开给定笔记的给定版本
-    Q_INVOKABLE void viewNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
-    // 将其下载到本地,但是不打开
+
+    // 将文件写入到本地笔记
     Q_INVOKABLE void restoreNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
     // 打开指定版本的笔记
     Q_INVOKABLE void openNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
@@ -134,10 +141,15 @@ public:
     Q_INVOKABLE void syncNotebook(vnotex::ID notebookId);
     Q_INVOKABLE void syncNote(vnotex::ID noteId, vnotex::ID notebookId);
     Q_INVOKABLE void openNote(vnotex::ID noteId, vnotex::ID notebookId);
+    Q_INVOKABLE void openNoteInViewArea(vnotex::ID noteId, vnotex::ID notebookId);
+    Q_INVOKABLE void snapshot(vnotex::ID notebookId, vnotex::ID noteId, const QString &description);
     Q_INVOKABLE void setSyncInterval(int minutes);
     Q_INVOKABLE int getSyncInterval() const;
     Q_INVOKABLE void setAutoSync(bool enabled);
     Q_INVOKABLE bool getAutoSync() const;
+    Q_INVOKABLE void deleteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version);
+    Q_INVOKABLE void removeSync(vnotex::ID notebookId, vnotex::ID noteId);
+    Q_INVOKABLE void getCloudFileName(vnotex::ID notebookId, vnotex::ID noteId);
 
 signals:
     void syncStatusChanged(const QString &status);
@@ -148,6 +160,7 @@ signals:
     void syncErrorOccurred(const QString &error);
     void cloudConnectionChanged(bool connected);
     void noteChanged(vnotex::ID notebookId,vnotex::ID noteID);
+    void cloudFileReturn(vnotex::ID notebookId, vnotex::ID noteId, const QString &cloudName);
 
     
 private:

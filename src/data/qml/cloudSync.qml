@@ -92,7 +92,7 @@ Rectangle {
                     color: {
                         switch(syncStatus) {
                         case "idle": return "gray"
-                        case "syncing": return "orange"
+                        case "processing": return "orange"
                         case "success": return "green"
                         case "error": return "red"
                         default: return "gray"
@@ -105,9 +105,9 @@ Rectangle {
                     text: {
                         switch(syncStatus) {
                         case "idle": return "空闲"
-                        case "syncing": return "同步中..."
-                        case "success": return "同步成功"
-                        case "error": return "同步失败"
+                        case "processing": return "正在执行"
+                        case "success": return "成功"
+                        case "error": return "失败:"+syncStatus
                         default: return syncStatus
                         }
                     }

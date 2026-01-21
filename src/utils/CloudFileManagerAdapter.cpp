@@ -1,7 +1,13 @@
 #include "cloudfilemanageradapter.h"
 #include "CloudFileNetWork.h"
+#include "LocalDataOfUser.h"
+#include "notebook/node.h"
+#include "notebook/notebook.h"
+#include "vnotex.h"
 #include <qcollator.h>
-
+#include <qobject.h>
+#include <qtmetamacros.h>
+#include "notebookmgr.h"
 using namespace vnotex;
 
 
@@ -87,11 +93,83 @@ void CloudFileManagerAdapter::downloadFile(const QString& cloudId,
                                            const QString& notebookName,
                                            bool immediateMapping)
 {
-    // 空实现，具体功能后续添加
-    Q_UNUSED(cloudId)
-    Q_UNUSED(targetPath)
-    Q_UNUSED(notebookName)
-    Q_UNUSED(immediateMapping)
+    // 实现下载文件功能
+    CloudFileNetWork *network = CloudFileNetWork::getInstance();
+
+    // 获取文件信息
+    NetResult<NetWorkFileInfo> fileInfoResult = network->getFileByFileID(CloudFileNetWork::IDFromString(cloudId));
+
+    if (fileInfoResult.isFailure()) {
+        qWarning() << "Failed to get file info for cloudId:" << cloudId;
+        emit fileDownloaded(cloudId, false);
+        return;
+    }
+
+    NetWorkFileInfo fileInfo = *(fileInfoResult.data);
+
+    // 获取最新版本内容
+    NetResult<QString> contentResult = network->getVersionContent(fileInfo.latestVersionID);
+    auto name = network->getFileByFileID(fileInfo.fileID);
+    name.isNotError();
+    if (contentResult.isFailure()) {
+        qWarning() << "Failed to get content for file:" << cloudId;
+        emit fileDownloaded(cloudId, false);
+        return;
+    }
+
+    QString content = *(contentResult.data);
+    
+
+
+    // 根据参数决定保存位置
+    if (targetPath.isEmpty()) {
+        // 存储到笔记本
+        QSharedPointer<Notebook> book;
+        if (notebookName.isEmpty()) {
+            book = VNoteX::getInst().getNotebookMgr().getCurrentNotebook();
+        } else {
+            book = VNoteX::getInst().getNotebookMgr().findNotebookWithGivenName(notebookName);
+        }
+        QSharedPointer<Node> node = book->newNode(book->getRootNode().data(), Node::Content, name.getData().fileName, content);
+        emit book->nodeUpdated(node.data());
+        if (immediateMapping) {
+            auto mapping = LocalDataOfUser::getUser()->getMapping();
+            (*mapping)[{book->getId(),node->getId()}] = cloudId;
+        }
+    } else {
+        QString fullPath;
+        // 存储到本地指定路径
+        QDir dir(targetPath);
+        if (!dir.exists()) {
+            if (!dir.mkpath(targetPath)) {
+                qWarning() << "Failed to create directory:" << targetPath;
+                emit fileDownloaded(cloudId, false);
+                return;
+            }
+        }
+
+        fullPath = QDir(targetPath).filePath(fileInfo.fileName);
+        QFile file(fullPath);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qWarning() << "Failed to open file for writing:" << fullPath;
+            emit fileDownloaded(cloudId, false);
+            return;
+        }
+
+        QTextStream out(&file);
+        out.setEncoding(QStringConverter::Utf8);
+        out << content;
+        file.close();
+    }
+
+    // 写入文件
+
+
+    // 发出信号通知下载完成
+    emit fileDownloaded(cloudId, true);
+
+    // 如果需要立即建立映射关系，这里可以添加相关逻辑
+
 }
 
 QVariantList CloudFileManagerAdapter::getUploadRecords(const QString& cloudId)
@@ -150,11 +228,33 @@ void CloudFileManagerAdapter::downloadVersion(const QString& cloudId, int versio
     Q_UNUSED(targetPath)
 }
 
+QVariantList CloudFileManagerAdapter::getNotebookList()
+{
+
+    QVariantList notebooks;
+    auto books = VNoteX::getInst().getNotebookMgr().getNotebooks();
+    for (auto i:books) {
+        notebooks.append(i->getName());
+    }
+    return notebooks;
+}
+
 QString CloudFileManagerAdapter::explore(const QString& title)
 {
-    // 空实现，具体功能后续添加
-    Q_UNUSED(title)
-    return QString();
+    // 实现路径选择功能
+    QFileDialog dialog;
+    dialog.setWindowTitle(title);
+    dialog.setFileMode(QFileDialog::Directory);
+    dialog.setOption(QFileDialog::ShowDirsOnly, true);
+
+    if (dialog.exec()) {
+        QStringList selectedPaths = dialog.selectedFiles();
+        if (!selectedPaths.isEmpty()) {
+            return selectedPaths.first();
+        }
+    }
+
+    return QString(); // 用户取消了对话框
 }
 
 QString CloudFileManagerAdapter::networkStatus() const

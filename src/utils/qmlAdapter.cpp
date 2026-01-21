@@ -31,7 +31,7 @@ QmlAdapter::QmlAdapter(QObject *parent)
     setupConnections();
 }
 
-void QmlAdapter::setupConnections()
+void QmlAdapter::setupConnections(  ) 
 {
     // 连接笔记本管理器信号
     connect(&VNoteX::getInst().getNotebookMgr(), &NotebookMgr::notebooksUpdated, this, [this]() {
@@ -234,25 +234,164 @@ void QmlAdapter::openNote(vnotex::ID noteId, vnotex::ID notebookId) {
     qDebug() << "Opening note:" << noteId << "from notebook:" << notebookId;
 }
 
+// 在ViewArea中打开笔记
+void QmlAdapter::openNoteInViewArea(vnotex::ID noteId, vnotex::ID notebookId) {
+    qDebug() << "Opening note in ViewArea:" << noteId << "from notebook:" << notebookId;
+
+    // 获取笔记本
+    auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
+    if (!notebook) {
+        qWarning() << "Failed to find notebook with ID:" << notebookId;
+        return;
+    }
+
+    // 通过ID查找笔记节点
+    auto node = notebook->FindNoteById(noteId);
+    if (!node) {
+        qWarning() << "Failed to find note with ID:" << noteId << "in notebook:" << notebookId;
+        return;
+    }
+
+    // 获取主窗口并打开笔记
+    auto mainWindow = VNoteX::getInst().getMainWindow();
+    if (!mainWindow) {
+        qWarning() << "Failed to get main window";
+        return;
+    }
+
+    // 获取ViewArea
+    auto viewArea = mainWindow->getViewArea();
+    if (!viewArea) {
+        qWarning() << "Failed to get ViewArea";
+        return;
+    }
+
+    // 获取BufferMgr
+    auto &bufferMgr = VNoteX::getInst().getBufferMgr();
+
+    // 创建打开参数
+    auto paras = QSharedPointer<FileOpenParameters>::create();
+
+    // 使用BufferMgr打开笔记
+    bufferMgr.open(node.get(), paras);
+}
+
 // 添加笔记本
 void QmlAdapter::addNotebook() {
     qDebug() << "Add notebook clicked";
 }
 
-// 查看笔记版本
-void QmlAdapter::viewNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version) {
-    Q_UNUSED(noteId)
-    Q_UNUSED(notebookId)
-    Q_UNUSED(version)
-    qDebug() << "Viewing note version:" << noteId << "from notebook:" << notebookId << "version:" << version;
-}
+// 保存笔记到云端
+void QmlAdapter::saveToCloud(vnotex::ID notebookId, vnotex::ID noteId) {
+    qDebug() << "Saving note to cloud:" << noteId << "from notebook:" << notebookId;
 
+    // 获取笔记本和笔记信息
+    auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
+    if (!notebook) {
+        qWarning() << "Failed to find notebook with ID:" << notebookId;
+        return;
+    }
+
+    auto node = notebook->FindNoteById(noteId);
+    if (!node) {
+        qWarning() << "Failed to find note with ID:" << noteId << "in notebook:" << notebookId;
+        return;
+    }
+
+    // 获取笔记的文件对象
+    auto contentFile = node->getContentFile();
+    if (!contentFile) {
+        qWarning() << "Failed to get content file for note:" << noteId;
+        return;
+    }
+
+    // 读取当前文件内容
+    QString content;
+    try {
+        content = contentFile->read();
+    } catch (const std::exception &e) {
+        qWarning() << "Failed to read content from note file:" << e.what();
+        return;
+    }
+
+    // 获取映射关系
+    auto mapping = LocalDataOfUser::getUser()->getMapping();
+    auto cloudIDIter = mapping->find({notebookId, noteId});
+
+    // 如果笔记未同步到云端，则不进行任何操作
+    if (cloudIDIter == mapping->end()) {
+        qWarning() << "Note is not synced to cloud, cannot save to cloud";
+        emit syncErrorOccurred("Note is not synced to cloud, cannot save to cloud");
+        return;
+    }
+
+    auto backend = CloudFileNetWork::getInstance();
+    auto cloudFileID = CloudFileNetWork::IDFromString(*cloudIDIter);
+
+    auto result = backend->updateFileContent(cloudFileID, content);
+
+    if (result.isFailure()) {
+        qWarning() << "Failed to update file content in cloud:" << result.errorToString();
+        emit syncErrorOccurred(result.errorToString());
+        return;
+    }
+
+    qDebug() << "Successfully updated note content in cloud";
+    setSyncStatus("success");
+
+    // 发出信号通知界面更新
+    emit noteDetailsChanged(noteId, notebookId);
+}
+ 
 // 恢复笔记版本
 void QmlAdapter::restoreNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version) {
-    Q_UNUSED(noteId)
-    Q_UNUSED(notebookId)
-    Q_UNUSED(version)
-    qDebug() << "Restoring note version:" << noteId << "from notebook:" << notebookId << "version:" << version;
+    qDebug() << "Restoring note version:" << noteId << "from notebook:" << notebookId << "to version:" << version;
+
+    // 获取笔记本和笔记信息
+    auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
+    if (!notebook) {
+        qWarning() << "Failed to find notebook with ID:" << notebookId;
+        return;
+    }
+
+    auto node = notebook->FindNoteById(noteId);
+    if (!node) {
+        qWarning() << "Failed to find note with ID:" << noteId << "in notebook:" << notebookId;
+        return;
+    }
+
+    // 获取云端ID
+    auto cloudID = LocalDataOfUser::getUser()->getMapping()->find({notebookId, noteId});
+    if (cloudID == LocalDataOfUser::getUser()->getMapping()->end()) {
+        qWarning() << "Note is not synced to cloud, cannot restore to version:" << version;
+        return;
+    }
+
+    // 获取版本内容
+    auto versionContent = CloudFileNetWork::getInstance()->getVersionContent(version);
+    if (versionContent.isFailure()) {
+        qWarning() << "Failed to get content of version:" << version << "Error:" << versionContent.status;
+        return;
+    }
+
+    // 获取笔记的文件对象
+    auto contentFile = node->getContentFile();
+    if (!contentFile) {
+        qWarning() << "Failed to get content file for note:" << noteId;
+        return;
+    }
+
+    // 将版本内容写入到当前笔记文件
+    try {
+        contentFile->write(*versionContent.data);
+        qDebug() << "Successfully restored note" << noteId << "to version" << version;
+
+        // 发出信号通知界面更新
+        emit noteChanged(notebookId, noteId);
+        emit noteDetailsChanged(noteId, notebookId);
+    } catch (const std::exception &e) {
+        qWarning() << "Failed to write content to note file:" << e.what();
+    }
 }
 
 // 打开指定版本的笔记
@@ -289,8 +428,8 @@ void QmlAdapter::openNoteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnote
     // 创建临时文件路径
     QString tempFileName = QString("temp-%1-%2-%3")
                               .arg(notebook->getName())
-                              .arg(node->getName())
-                              .arg(version);
+                              .arg(version)
+                              .arg(node->getName());
 
     // 获取标准缓存目录作为临时存储位置
     QString tempPath = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
@@ -341,6 +480,14 @@ QVariantMap QmlAdapter::getNoteDetails(vnotex::ID noteId, vnotex::ID notebookId)
         details.cloudId = *cloudID;
         details.syncStatus = NoteDetailsInfo::isLatest;
         auto versions = CloudFileNetWork::getInstance()->getAllVersions(CloudFileNetWork::IDFromString(*cloudID));
+        auto conflicts = LocalDataOfUser::getUser()->getMapping()->getKeysByValue(*cloudID);
+        for(auto i:conflicts){
+            if(!(i.book==notebookId&&i.note==noteId)){
+                auto b = VNoteX::getInst().getNotebookMgr().findNotebookById(i.book);
+                auto n = b->FindNoteById(i.note);
+                details.conflictWith.append(""+b->getName()+" "+n->getName());
+            }
+        }
         if(versions.isNotError()){
             auto vers = versions.getData();
             auto current = CloudFileNetWork::getInstance()->getLatestVersionID(CloudFileNetWork::IDFromString(*cloudID));
@@ -408,6 +555,67 @@ int QmlAdapter::getSyncInterval() const {
     return 30;
 }
 
+// 创建快照
+void QmlAdapter::snapshot(vnotex::ID notebookId, vnotex::ID noteId, const QString &description) {
+    qDebug() << "Creating snapshot for note:" << noteId << "in notebook:" << notebookId << "with description:" << description;
+
+    // 获取笔记本和笔记信息
+    auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
+    if (!notebook) {
+        qWarning() << "Failed to find notebook with ID:" << notebookId;
+        return;
+    }
+
+    auto node = notebook->FindNoteById(noteId);
+    if (!node) {
+        qWarning() << "Failed to find note with ID:" << noteId << "in notebook:" << notebookId;
+        return;
+    }
+
+    // 获取笔记的文件对象
+    auto contentFile = node->getContentFile();
+    if (!contentFile) {
+        qWarning() << "Failed to get content file for note:" << noteId;
+        return;
+    }
+
+    // 读取当前文件内容
+    QString content;
+    try {
+        content = contentFile->read();
+    } catch (const std::exception &e) {
+        qWarning() << "Failed to read content from note file:" << e.what();
+        return;
+    }
+
+    // 检查是否已同步到云端
+    auto mapping = LocalDataOfUser::getUser()->getMapping();
+    auto cloudIDIter = mapping->find({notebookId, noteId});
+
+    if (cloudIDIter == mapping->end()) {
+        // 如果笔记未同步到云端，无法创建快照
+        qWarning() << "Note is not synced to cloud, cannot create snapshot";
+        return;
+    }
+
+    // 笔记已在云端，直接创建快照版本
+    auto backend = CloudFileNetWork::getInstance();
+    auto cloudFileID = CloudFileNetWork::IDFromString(*cloudIDIter);
+
+    auto result = backend->snapshotVersionForFile(
+        cloudFileID,
+        description
+    );
+
+    if (result.isFailure()) {
+        qWarning() << "Failed to create snapshot version:" << result.status;
+        return;
+    }
+
+    qDebug() << "Successfully created snapshot version:" << result.getData();
+    emit noteDetailsChanged(noteId, notebookId);
+}
+
 // 设置自动同步
 void QmlAdapter::setAutoSync(bool enabled) {
     qDebug() << "Setting auto sync to:" << enabled;
@@ -418,4 +626,106 @@ bool QmlAdapter::getAutoSync() const {
     qDebug() << "Getting auto sync status";
     // 返回默认值，例如false
     return false;
+}
+
+// 删除指定版本
+void QmlAdapter::deleteVersion(vnotex::ID noteId, vnotex::ID notebookId, vnotex::ID version) {
+    qDebug() << "Deleting note version:" << version << "for note:" << noteId << "in notebook:" << notebookId;
+
+    // 获取笔记本和笔记信息
+    auto notebook = VNoteX::getInst().getNotebookMgr().findNotebookById(notebookId);
+    if (!notebook) {
+        qWarning() << "Failed to find notebook with ID:" << notebookId;
+        return;
+    }
+
+    auto node = notebook->FindNoteById(noteId);
+    if (!node) {
+        qWarning() << "Failed to find note with ID:" << noteId << "in notebook:" << notebookId;
+        return;
+    }
+
+    // 获取云端ID
+    auto cloudID = LocalDataOfUser::getUser()->getMapping()->find({notebookId, noteId});
+    if (cloudID == LocalDataOfUser::getUser()->getMapping()->end()) {
+        qWarning() << "Note is not synced to cloud, cannot delete version:" << version;
+        return;
+    }
+
+    // 确保不能删除当前版本
+    auto current = CloudFileNetWork::getInstance()->getLatestVersionID(CloudFileNetWork::IDFromString(*cloudID));
+    if(current.isNotError()){
+        CloudFileNetWorkFileAndVersionID currentID = current.getData();
+        if(version == currentID){
+            qWarning() << "Cannot delete current version:" << version;
+            return;
+        }
+    }
+
+    // 调用后端API删除指定版本
+    auto backend = CloudFileNetWork::getInstance();
+    auto cloudFileID = CloudFileNetWork::IDFromString(*cloudID);
+
+    auto result = backend->deleteFileVersion(cloudFileID, version);
+
+    if (result.isFailure()) {
+        qWarning() << "Failed to delete version:" << version << "Error:" << result.errorToString();
+        return;
+    }
+
+    qDebug() << "Successfully deleted version:" << version;
+
+    // 发出信号通知界面更新
+    emit noteDetailsChanged(noteId, notebookId);
+}
+
+// 移除同步
+void QmlAdapter::removeSync(vnotex::ID notebookId, vnotex::ID noteId) {
+    qDebug() << "Removing sync for note:" << noteId << "in notebook:" << notebookId;
+
+    // 从映射表中移除同步关系
+    auto mapping = LocalDataOfUser::getUser()->getMapping();
+    NoteRecord key = {notebookId,noteId};
+
+    if (mapping->contains(key)) {
+        mapping->remove(key);
+        qDebug() << "Successfully removed sync for note:" << noteId;
+
+        // 发出信号通知界面更新
+        emit noteDetailsChanged(noteId, notebookId);
+    } else {
+        qWarning() << "Note is not synced, cannot remove sync";
+    }
+}
+
+// 获取云端文件名
+void QmlAdapter::getCloudFileName(vnotex::ID notebookId, vnotex::ID noteId) {
+    qDebug() << "Getting cloud filename for note:" << noteId << "in notebook:" << notebookId;
+
+    // 从映射表中查找同步关系
+    auto mapping = LocalDataOfUser::getUser()->getMapping();
+    NoteRecord key = {notebookId, noteId};
+
+    if (mapping->contains(key)) {
+        // 获取云端文件ID
+        QString cloudFileId = mapping->value(key);
+
+        // 通过CloudFileNetWork获取云端文件信息
+        auto backend = CloudFileNetWork::getInstance();
+        auto fileInfoResult = backend->getFileByFileID(CloudFileNetWork::IDFromString(cloudFileId));
+
+        if (fileInfoResult.isNotError()) {
+            // 成功获取云端文件信息，发送信号返回云端文件名
+            QString cloudFileName = fileInfoResult.getData().fileName;
+            emit cloudFileReturn(notebookId, noteId, cloudFileName);
+        } else {
+            // 获取云端文件信息失败，返回错误信息
+            qWarning() << "Failed to get cloud file info for ID:" << cloudFileId << "Error:" << fileInfoResult.errorToString();
+            emit cloudFileReturn(notebookId, noteId, "");
+        }
+    } else {
+        // 笔记未同步到云端，返回空字符串
+        qWarning() << "Note is not synced to cloud, cannot get cloud filename";
+        emit cloudFileReturn(notebookId, noteId, "");
+    }
 }

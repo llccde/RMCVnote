@@ -239,6 +239,9 @@ public:
     // 删除文件及其所有版本
     NetResult<bool> deleteFile(qint64 fileID);
 
+    // 删除指定版本
+    NetResult<bool> deleteFileVersion(qint64 fileID, qint64 versionID);
+
     // 获取文件的最新版本ID
     NetResult<qint64> getLatestVersionID(qint64 fileID);
 private:
